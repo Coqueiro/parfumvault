@@ -2,22 +2,23 @@
 version: '3.8'
 services:
   pvdb:
-    image: mariadb:10.5
+    image: coqueirotree/pvault-mariadb:latest
     command: '--default-authentication-plugin=mysql_native_password --innodb-flush-method=fsync'
     volumes:
-      - db_data:/var/lib/mysql
+      - ./db_data:/var/lib/mysql
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: pvault
       MYSQL_DATABASE: pvault
       MYSQL_USER: pvault
       MYSQL_PASSWORD: pvault
-    expose:
-      - 3306
-  pvault:
-    image: globaldyne/perfumersvault:latest
     ports:
-      - 8000:8000
+      - 3306:3306
+  pvault:
+    # image: globaldyne/perfumersvault:latest
+    image: pvault:latest
+    ports:
+      - 8001:8000
     restart: always
     environment:
       PLATFORM: CLOUD
@@ -29,12 +30,17 @@ services:
       TMP_PATH: /tmp/
       FILE_EXT: 'pdf, doc, docx, xls, csv, xlsx, png, jpg, jpeg, gif'
       DB_BACKUP_PARAMETERS: '--column-statistics=1'
-  phpmyadmin:
-    image: globaldyne/phpmyadmin:cloud
-    ports:
-      - 9000:8000
-    restart: always
+# phpmyadmin:
+    # image: globaldyne/phpmyadmin:cloud
+    # ports:
+    #  - 9000:8000
+    # restart: always
+    # environment:
+    #  DB_HOST: pvdb
+  adminer:
+    image: adminer:latest
     environment:
-      DB_HOST: pvdb
-volumes:
-  db_data:
+      ADMINER_DEFAULT_SERVER: pvdb
+    restart: always
+    ports:
+      - 9000:8080
