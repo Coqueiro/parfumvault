@@ -1,0 +1,2 @@
+ALTER TABLE ingredients
+MODIFY COLUMN odor TEXT;
