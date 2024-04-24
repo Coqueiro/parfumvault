@@ -156,7 +156,7 @@ def import_spreadsheet_materials(fetch_from_remote=False,
             ]),
             transform_functions={
                 'type': lambda type: 'EO' if 'EO' in type else 'AC',
-                'profile': lambda profile: 'Heart' if profile == 'Middle' else profile,
+                'profile': lambda profile: 'Heart' if profile.capitalize() == 'Middle' else profile.capitalize(),
                 'strength': lambda strength: strength.capitalize(),
                 'category': lambda category: db_ingCategory_map[category],
                 'rdi': lambda rdi: int(rdi.split(' ')[0]) if rdi != '' else 0,
