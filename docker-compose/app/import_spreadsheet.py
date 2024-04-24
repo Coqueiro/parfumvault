@@ -201,6 +201,6 @@ if __name__ == "__main__":
     import_spreadsheet_materials(
         fetch_from_remote=False,
         import_ingCategory=False,
-        import_ingredients=True,
+        import_ingredients=False,
         import_ingExtraProperties=False,
     )
