@@ -162,3 +162,10 @@ if __name__ == "__main__":
         # If user says it's not ok, ask if there's an existing ingredient and add the name to 
         ## the pvault.synonyms (add the pdf name as a synonym)
         # Create readers for different kinds of pdfs depending on pdf properties, including path
+        
+        # Steps:
+        # 1. Formula extraction
+        # 2. Ingredient matching
+        # 3. Formula writing to database
+        
+        # We start with 2 for a single formula, then 3, then 1 to scale to writing all formulas
