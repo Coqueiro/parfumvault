@@ -3,6 +3,7 @@ import os
 
 from db_client import MariaDBClient
 from spreadsheet_client import GoogleSheetsReader
+from collections import OrderedDict
 
 
 APP_PATH = f"{os.getenv('HOME')}/Github/parfumvault/docker-compose/app"
@@ -149,11 +150,12 @@ def import_spreadsheet_materials(fetch_from_remote=False,
             sheet_results, db_ingredients_cols)
         import_db_ingredients_data = transform_entry_in_dict_list(
             ingredients_results,
-            entry_map={
-                'category': 'type',
-            },
+            entry_map=OrderedDict([
+                ('category', 'type'),
+                ('type', 'name'),
+            ]),
             transform_functions={
-                'type': lambda _: 'AC',
+                'type': lambda type: 'EO' if 'EO' in type else 'AC',
                 'profile': lambda profile: 'Heart' if profile == 'Middle' else profile,
                 'category': lambda category: db_ingCategory_map[category],
                 'rdi': lambda rdi: int(rdi.split(' ')[0]) if rdi != '' else 0,
@@ -198,6 +200,6 @@ if __name__ == "__main__":
     import_spreadsheet_materials(
         fetch_from_remote=False,
         import_ingCategory=False,
-        import_ingredients=False,
+        import_ingredients=True,
         import_ingExtraProperties=False,
     )
