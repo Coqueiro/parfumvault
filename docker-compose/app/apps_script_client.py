@@ -6,6 +6,10 @@ from googleapiclient.discovery import build
 
 
 # https://stackoverflow.com/questions/77256994/calling-google-apps-script-functions-with-python-requested-entity-was-not-foun
+# https://developers.google.com/apps-script/guides/web
+# https://developers.google.com/apps-script/api/reference/rest/v1/scripts/run
+# https://developers.google.com/apps-script/api/quickstart/python
+# https://console.cloud.google.com/apis/dashboard?authuser=1&project=savvy-torch-283216&supportedpurview=project
 def authorize_script_api(credentials_file):
     # Define the scopes required for the Google Apps Script API
     SCOPES = [

@@ -8,7 +8,6 @@ from db_client import MariaDBClient
 APP_PATH = f"{os.getenv('HOME')}/Github/parfumvault/docker-compose/app"
 SPREADSHEET_CREDENTIALS_FILE = f"{APP_PATH}/credentials/spreadsheet_credentials.json"
 DB_CREDENTIALS_FILE = f"{APP_PATH}/credentials/db_credentials.json"
-MATERIALS_FILE = f"{APP_PATH}/artifacts/materials.json"
 
 
 def db_test():
@@ -36,7 +35,7 @@ def apps_script_test():
     script_url = "https://script.google.com/macros/s/AKfycbz4qF_N7bbUYY3hQgDbszm6NYAoL1bqdJ7T130U1p2wMmCKGR3tFVqpesSyAB31HOlQHQ/exec"
     script_id = "15DnFNALhMuMlEPZ70t06ACYfrYVIiJKOQkcv5rnG8GaBEn1MZfFjGT3o"
     function_name = "testGetFormula"
-    argument = "Pineapple Gemini Base"
+    argument = "Violets Gemini 3.6 - Revised - violet, jasmin, sweet"
 
     credentials = authorize_script_api(SPREADSHEET_CREDENTIALS_FILE)
 
