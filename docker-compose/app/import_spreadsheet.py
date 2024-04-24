@@ -16,12 +16,11 @@ def db_test():
     with open(DB_CREDENTIALS_FILE) as f:
         db_client = MariaDBClient(**json.load(f))
 
+    # results = db_client.read("pvault.ingredients") #, columns=["name", "score"], where_clause="id < %s", params=[4])
     results = db_client.execute(
         "SELECT * FROM pvault.ingredients WHERE id < %s", [4])
     print(results)
 
-    # results = db_client.read("pvault.ingredients") #, columns=["name", "score"], where_clause="score > %s", params=[70])
-    # print(results)
 
 
 def db_upsert_test():
@@ -65,7 +64,7 @@ def apps_script_test():
 
 if __name__ == "__main__":
     # db_test()
-    db_upsert_test()
-    # read_spreadsheet_materials()
+    # db_upsert_test()
+    read_spreadsheet_materials()
     # apps_script_test()
     pass
