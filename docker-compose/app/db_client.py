@@ -4,6 +4,7 @@ import mariadb
 # 1. Install MariaDB Connector/Python: `pip install mariadb`
 # 2. Replace placeholders with your database credentials
 
+
 class MariaDBClient:
     def __init__(self, host, port, database, user, password):
         self.host = host
@@ -30,41 +31,37 @@ class MariaDBClient:
         if conn:
             conn.close()
 
-    def upsert(self, table_name, data, primary_key):
+    def upsert(self, table_name, data):
         """
-        Upserts data into the specified table.
+        Upserts a list of dictionaries into the specified table.
 
         Args:
             table_name (str): Name of the table.
-            data (dict): Dictionary containing column names and values.
-            primary_key (str or list): Primary key column(s) of the table.
+            data (list): List of dictionaries where each dictionary represents a row.
         """
 
         conn = self.connect()
         if conn:
             cursor = conn.cursor()
 
-            columns = ", ".join(data.keys())
-            placeholders = ", ".join(["%s"] * len(data))
-            values = list(data.values())
+            if not data:
+                return  # Nothing to upsert
 
-            if isinstance(primary_key, str):  # Single primary key
-                query = f"""
-                    INSERT INTO {table_name} ({columns})
-                    VALUES ({placeholders})
-                    ON DUPLICATE KEY UPDATE {columns} = VALUES({columns})
-                """
-            else:  # Composite primary key
-                update_assignments = ", ".join(
-                    [f"{col} = VALUES({col})" for col in data.keys()])
-                query = f"""
-                    INSERT INTO {table_name} ({columns})
-                    VALUES ({placeholders})
-                    ON DUPLICATE KEY UPDATE {update_assignments}
-                """
+            columns = ", ".join(data[0].keys())
+            placeholders = ", ".join(["%s"] * len(data[0]))
+            values_placeholder = ", ".join([f"({placeholders})" for i in range(len(data))])
+            all_values = [val for row in data for val in row.values()]
+
+            update_assignments = ", ".join(
+                [f"{col} = VALUES({col})" for col in data[0].keys()])
+            query = f"""
+                INSERT INTO {table_name} ({columns})
+                VALUES {values_placeholder}
+                ON DUPLICATE KEY UPDATE {update_assignments}
+            """
 
             try:
-                cursor.execute(query, values)
+                cursor.execute(query, all_values)
                 conn.commit()
             except mariadb.Error as e:
                 print(f"Error during upsert: {e}")
@@ -88,7 +85,6 @@ class MariaDBClient:
             params
         )
 
-
     def execute(self, query, params=None):
         """
         Executes a custom SQL query.
@@ -108,8 +104,10 @@ class MariaDBClient:
                 # Fetch results for SELECT queries
                 if query.lower().startswith("select"):
                     raw_result = cursor.fetchall()
-                    column_names = [column_desc[0] for column_desc in cursor.description]
-                    result = [dict(zip(column_names, row)) for row in raw_result]
+                    column_names = [column_desc[0]
+                                    for column_desc in cursor.description]
+                    result = [dict(zip(column_names, row))
+                              for row in raw_result]
                 else:
                     conn.commit()  # Commit changes for other query types
                     result = None  # No data to return for non-SELECT queries
