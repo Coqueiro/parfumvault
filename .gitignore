@@ -8,5 +8,7 @@ inc/config.php
 *.swp
 t.php
 tests/
+__pycache__/
 modules/suppliers/pvOnlineBK.json
 modules/suppliers/pvOnlineBK.php
+spreadsheet_credentials.json
