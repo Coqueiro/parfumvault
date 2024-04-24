@@ -1,16 +1,14 @@
+import json
 import os
+
+from apps_script_client import authorize_script_api, run_function
 from db_client import MariaDBClient
 from spreadsheet_client import GoogleSheetsReader
-from apps_script_client import run_function, authorize_script_api
+
 
 def db_test():
-    db_client = MariaDBClient(
-        host="pvaultdb.rasp",
-        port=3306,
-        database="pvault",
-        user="pvault",
-        password="pvault"
-    )
+    with open(f"{os.getenv('PWD')}/docker-compose/app/db_credentials.json") as f:
+        db_client = MariaDBClient(**json.load(f))
     results = db_client.execute(
         "SELECT * FROM pvault.ingredients WHERE id < %s", [4])
     print(results)
@@ -31,19 +29,21 @@ def spreadsheet_test():
 
 
 def apps_script_test():
-    script_id = "15DnFNALhMuMlEPZ70t06ACYfrYVIiJKOQkcv5rnG8GaBEn1MZfFjGT3o"
     script_url = "https://script.google.com/macros/s/AKfycbz4qF_N7bbUYY3hQgDbszm6NYAoL1bqdJ7T130U1p2wMmCKGR3tFVqpesSyAB31HOlQHQ/exec"
+    script_id = "15DnFNALhMuMlEPZ70t06ACYfrYVIiJKOQkcv5rnG8GaBEn1MZfFjGT3o"
     function_name = "testGetFormula"
     argument = "Pineapple Gemini Base"
+    
     credentials_file = f"{os.getenv('PWD')}/docker-compose/app/spreadsheet_credentials.json"
     credentials = authorize_script_api(credentials_file)
 
-    result = run_function(script_url, script_id, function_name, argument, credentials)
+    result = run_function(script_url, script_id,
+                          function_name, argument, credentials)
     print(result)
 
 
 if __name__ == "__main__":
-    # db_test()
+    db_test()
     # spreadsheet_test()
     # apps_script_test()
     pass
