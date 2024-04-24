@@ -1,7 +1,6 @@
 import json
 import os
 
-from apps_script_client import authorize_script_api, run_function
 from db_client import MariaDBClient
 from spreadsheet_client import GoogleSheetsReader
 
@@ -10,27 +9,6 @@ APP_PATH = f"{os.getenv('HOME')}/Github/parfumvault/docker-compose/app"
 SPREADSHEET_CREDENTIALS_FILE = f"{APP_PATH}/credentials/spreadsheet_credentials.json"
 DB_CREDENTIALS_FILE = f"{APP_PATH}/credentials/db_credentials.json"
 MATERIALS_FILE = f"{APP_PATH}/artifacts/materials.json"
-
-
-def db_test():
-    with open(DB_CREDENTIALS_FILE) as f:
-        db_client = MariaDBClient(**json.load(f))
-
-    # results = db_client.read("pvault.ingredients") #, columns=["name", "score"], where_clause="id < %s", params=[4])
-    results = db_client.execute(
-        "SELECT * FROM pvault.ingredients WHERE id < %s", [4])
-    print(results)
-
-
-def db_upsert_test():
-    with open(DB_CREDENTIALS_FILE) as f:
-        db_client = MariaDBClient(**json.load(f))
-
-    data = [
-        {"name": "Hydroxycitronellal", "type": "AC"},
-        {"name": "Vanillin Crystals", "type": "AC"},
-    ]
-    db_client.upsert(table_name="ingredients", data=data)
 
 
 def create_dict_list(header, data):
@@ -134,7 +112,7 @@ def import_spreadsheet_materials(fetch_from_remote=False,
     # `tags` are comma separated
     # `category` is a int that refers to a int in the `ingcategory` table, which is a table with `id`, `name` where `name` refers to `type` in 'sheet_cols'
     sheet_cols = ['class', 'name', 'type', 'type2', 'profile', 'profile2', 'fullProfile', 'notes',
-                  'odor', 'ifraRestriction', 'dilutionPercentiles', 'avaiableDilutions', 'storeInFridge',
+                  'odor', 'ifraRestriction', 'dilutionPercentiles', 'availableDilutions', 'storeInFridge',
                   'strength', 'tenacityOnPaper', 'tenacity', 'rdi', 'diluteNotes', 'cas', 'casEU',
                   'molecularWeight', 'purchaseLink', 'moreInfo1', 'moreInfo2', 'moreInfo3',
                   'addedByMe', 'tags']
@@ -216,19 +194,6 @@ def import_spreadsheet_materials(fetch_from_remote=False,
                          data=import_db_ingExtraProperties_data)
 
 
-def apps_script_test():
-    script_url = "https://script.google.com/macros/s/AKfycbz4qF_N7bbUYY3hQgDbszm6NYAoL1bqdJ7T130U1p2wMmCKGR3tFVqpesSyAB31HOlQHQ/exec"
-    script_id = "15DnFNALhMuMlEPZ70t06ACYfrYVIiJKOQkcv5rnG8GaBEn1MZfFjGT3o"
-    function_name = "testGetFormula"
-    argument = "Pineapple Gemini Base"
-
-    credentials = authorize_script_api(SPREADSHEET_CREDENTIALS_FILE)
-
-    result = run_function(script_url, script_id,
-                          function_name, argument, credentials)
-    print(result)
-
-
 if __name__ == "__main__":
     import_spreadsheet_materials(
         fetch_from_remote=False,
@@ -236,4 +201,3 @@ if __name__ == "__main__":
         import_ingredients=False,
         import_ingExtraProperties=False,
     )
-    # apps_script_test()

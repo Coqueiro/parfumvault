@@ -8,7 +8,7 @@ CREATE TABLE `ingExtraProperties` (
     `fullProfile` varchar(255) NOT NULL,
     `ifraRestriction` varchar(255) DEFAULT NULL,
     `dilutionPercentiles` varchar(255) DEFAULT NULL,
-    `avaiableDilutions` varchar(255) DEFAULT NULL,
+    `availableDilutions` varchar(255) DEFAULT NULL,
     `storeInFridge` varchar(255) DEFAULT NULL,
     `tenacityOnPaper` varchar(255) DEFAULT NULL,
     `diluteNotes` varchar(255) DEFAULT NULL,
