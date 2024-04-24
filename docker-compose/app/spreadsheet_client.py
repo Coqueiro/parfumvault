@@ -1,6 +1,10 @@
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
+# **How to use the class**
+
+# 1. Get Google Sheets API Credentials: See instructions at https://gspread.readthedocs.io
+# 2. Install dependencies: `pip install gspread oauth2client`
 
 class GoogleSheetsReader:
     def __init__(self, credentials_file):

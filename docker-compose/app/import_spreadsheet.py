@@ -1,63 +1,49 @@
 import os
 from db_client import MariaDBClient
 from spreadsheet_client import GoogleSheetsReader
-from apps_script_client import run_apps_script
-
-# **How to use the class**
-# 1. Install MariaDB Connector/Python: `pip install mariadb`
-# 2. Replace placeholders with your database credentials
-db_client = MariaDBClient(
-    host="pvaultdb.rasp",
-    port=3306,
-    database="pvault",
-    user="pvault",
-    password="pvault"
-)
-
-# data = {"id": 1, "name": "Alice", "score": 85}
-# db_client.upsert("scores", data, "id")
+from apps_script_client import run_function, authorize_script_api
 
 def db_test():
-    # Select example
-    results = db_client.execute("SELECT * FROM pvault.ingredients WHERE id < %s", [4])
+    db_client = MariaDBClient(
+        host="pvaultdb.rasp",
+        port=3306,
+        database="pvault",
+        user="pvault",
+        password="pvault"
+    )
+    results = db_client.execute(
+        "SELECT * FROM pvault.ingredients WHERE id < %s", [4])
     print(results)
 
-
+    # data = {"id": 1, "name": "Alice", "score": 85}
+    # db_client.upsert("scores", data, "id")
     # results = db_client.read("pvault.ingredients") #, columns=["name", "score"], where_clause="score > %s", params=[70])
     # print(results)
 
 
 def spreadsheet_test():
-    # **How to use the class**
-
-    # 1. Get Google Sheets API Credentials: See instructions at https://gspread.readthedocs.io 
-    # 2. Install dependencies: `pip install gspread oauth2client`
-
     credentials_file = f"{os.getenv('PWD')}/docker-compose/app/spreadsheet_credentials.json"
     reader = GoogleSheetsReader(credentials_file)
 
-    # Example usage:
-    results = reader.read_data("Perfume Personal Worksheet", "Formulas", "B147:G185")  
-    print(results) 
+    results = reader.read_data(
+        "Perfume Personal Worksheet", "Formulas", "B147:G185")
+    print(results)
+
 
 def apps_script_test():
-    # **Example Usage**
-
-    # Replace placeholders with your actual values
-    credentials_file = f"{os.getenv('PWD')}/docker-compose/app/spreadsheet_credentials.json"
-    project_id = "savvy-torch-283216"
-    deployment_id = "AKfycbzRmv8uO4PAZO_xOjvkv4DYJzTcZ9V6kz6CR29RfgH55_15koQKZ0WK8YOI2zKdoVVQAg"
     script_id = "15DnFNALhMuMlEPZ70t06ACYfrYVIiJKOQkcv5rnG8GaBEn1MZfFjGT3o"
-    function_name = "testGetFormula"  # Make sure this function exists in your Apps Script 
+    script_url = "https://script.google.com/macros/s/AKfycbz4qF_N7bbUYY3hQgDbszm6NYAoL1bqdJ7T130U1p2wMmCKGR3tFVqpesSyAB31HOlQHQ/exec"
+    function_name = "testGetFormula"
+    argument = "Pineapple Gemini Base"
+    credentials_file = f"{os.getenv('PWD')}/docker-compose/app/spreadsheet_credentials.json"
+    credentials = authorize_script_api(credentials_file)
 
-    # Example with parameters
-    # parameters = [10, 20]  
-    # result = run_apps_script(credentials_file, project_id, script_id, function_name, parameters)
-
-    # Example without parameters
-    result = run_apps_script(credentials_file, project_id, script_id, function_name)
-
+    result = run_function(script_url, script_id, function_name, argument, credentials)
     print(result)
 
-# spreadsheet_test()
-apps_script_test()
+
+if __name__ == "__main__":
+    # db_test()
+    # spreadsheet_test()
+    # apps_script_test()
+    pass

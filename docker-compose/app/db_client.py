@@ -1,5 +1,8 @@
 import mariadb
 
+# **How to use the class**
+# 1. Install MariaDB Connector/Python: `pip install mariadb`
+# 2. Replace placeholders with your database credentials
 
 class MariaDBClient:
     def __init__(self, host, port, database, user, password):
