@@ -6,9 +6,14 @@ from db_client import MariaDBClient
 from spreadsheet_client import GoogleSheetsReader
 
 
+SPREADSHEET_CREDENTIALS_FILE = f"{os.getenv('HOME')}/Github/parfumvault/docker-compose/app/spreadsheet_credentials.json"
+DB_CREDENTIALS_FILE = f"{os.getenv('HOME')}/Github/parfumvault/docker-compose/app/db_credentials.json"
+
+
 def db_test():
-    with open(f"{os.getenv('PWD')}/docker-compose/app/db_credentials.json") as f:
+    with open(DB_CREDENTIALS_FILE) as f:
         db_client = MariaDBClient(**json.load(f))
+
     results = db_client.execute(
         "SELECT * FROM pvault.ingredients WHERE id < %s", [4])
     print(results)
@@ -20,8 +25,7 @@ def db_test():
 
 
 def spreadsheet_test():
-    credentials_file = f"{os.getenv('PWD')}/docker-compose/app/spreadsheet_credentials.json"
-    reader = GoogleSheetsReader(credentials_file)
+    reader = GoogleSheetsReader(SPREADSHEET_CREDENTIALS_FILE)
 
     results = reader.read_data(
         "Perfume Personal Worksheet", "Formulas", "B147:G185")
@@ -33,9 +37,8 @@ def apps_script_test():
     script_id = "15DnFNALhMuMlEPZ70t06ACYfrYVIiJKOQkcv5rnG8GaBEn1MZfFjGT3o"
     function_name = "testGetFormula"
     argument = "Pineapple Gemini Base"
-    
-    credentials_file = f"{os.getenv('PWD')}/docker-compose/app/spreadsheet_credentials.json"
-    credentials = authorize_script_api(credentials_file)
+
+    credentials = authorize_script_api(SPREADSHEET_CREDENTIALS_FILE)
 
     result = run_function(script_url, script_id,
                           function_name, argument, credentials)
