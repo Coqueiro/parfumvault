@@ -93,7 +93,11 @@ def get_db_ingredients():
         db_ingredients_result["name"] for db_ingredients_result in db_ingredients_results
     ], [
         filter_text(
-            db_ingredients_result["name"], r"(IFF|FIRM|SYNA|SODA|KAO|GIV|ROBER|DPG|IPM|SYM|®|@)")
+            filter_text(
+                db_ingredients_result["name"],
+                r"(IFF|FIRM|SYNA|SODA|KAO|GIV|ROBER|DPG|IPM|SYM|DRT|FCC|®|@|Natural|Symrise|Givaudan|Firmenich)"
+            ), r"[ \-\(\)]+$"
+        )
         for db_ingredients_result in db_ingredients_results
     ]
 
@@ -150,7 +154,7 @@ if __name__ == "__main__":
             )
     print(counter)
         # IDEAS:
-        # If similarity > 0.95 approve the match
+        # If similarity = 1 approve the match (we want to avoid false positives at all costs)
         # Keep track of synonyms using the pvault.synonyms and use them as additional strings to check
         # Keep track of false-positives using a custom table to automatically deny match (pvault.falseIngredientMatches)
         # Depending on similarity level, prompt user to check if the match is ok, 
