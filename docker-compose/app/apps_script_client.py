@@ -1,11 +1,7 @@
 from __future__ import print_function
 
-import json
-import os
-
 import google.auth
 import requests
-from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
 

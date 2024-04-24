@@ -5,9 +5,10 @@ from apps_script_client import authorize_script_api, run_function
 from db_client import MariaDBClient
 from spreadsheet_client import GoogleSheetsReader
 
-
-SPREADSHEET_CREDENTIALS_FILE = f"{os.getenv('HOME')}/Github/parfumvault/docker-compose/app/spreadsheet_credentials.json"
-DB_CREDENTIALS_FILE = f"{os.getenv('HOME')}/Github/parfumvault/docker-compose/app/db_credentials.json"
+APP_PATH = f"{os.getenv('HOME')}/Github/parfumvault/docker-compose/app"
+SPREADSHEET_CREDENTIALS_FILE = f"{APP_PATH}/spreadsheet_credentials.json"
+DB_CREDENTIALS_FILE = f"{APP_PATH}/db_credentials.json"
+MATERIALS_FILE = f"{APP_PATH}/materials.json"
 
 
 def db_test():
@@ -24,11 +25,18 @@ def db_test():
     # print(results)
 
 
-def spreadsheet_test():
+def read_spreadsheet_materials(fetch_remote=False):
     reader = GoogleSheetsReader(SPREADSHEET_CREDENTIALS_FILE)
 
-    results = reader.read_data(
-        "Perfume Personal Worksheet", "Formulas", "B147:G185")
+    if fetch_remote:
+        results = reader.read_data(
+            "Perfume Personal Worksheet", "Materials", "C3:AB307")
+        with open(MATERIALS_FILE, "w") as f:
+            json.dump(results, f)
+    else:
+        print(MATERIALS_FILE)
+        with open(MATERIALS_FILE, "r") as f:
+            results = json.load(f)
     print(results)
 
 
@@ -46,7 +54,7 @@ def apps_script_test():
 
 
 if __name__ == "__main__":
-    db_test()
-    # spreadsheet_test()
+    # db_test()
+    read_spreadsheet_materials()
     # apps_script_test()
     pass
