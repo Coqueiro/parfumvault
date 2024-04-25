@@ -3,11 +3,7 @@ import os
 
 from apps_script_client import authorize_script_api, run_function
 from db_client import MariaDBClient
-
-
-APP_PATH = f"{os.getenv('HOME')}/Github/parfumvault/docker-compose/app"
-SPREADSHEET_CREDENTIALS_FILE = f"{APP_PATH}/credentials/spreadsheet_credentials.json"
-DB_CREDENTIALS_FILE = f"{APP_PATH}/credentials/db_credentials.json"
+from constants import SPREADSHEET_CREDENTIALS_FILE, DB_CREDENTIALS_FILE
 
 
 def db_test():

@@ -1,5 +1,4 @@
 import json
-import os
 import re
 
 import inquirer
@@ -10,11 +9,8 @@ from nltk.corpus import stopwords
 from nltk.metrics.distance import jaro_winkler_similarity
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
+from constants import DB_CREDENTIALS_FILE, APP_PATH
 
-from import_spreadsheet import read_spreadsheet_materials
-
-APP_PATH = f"{os.getenv('HOME')}/Github/parfumvault/docker-compose/app"
-DB_CREDENTIALS_FILE = f"{APP_PATH}/credentials/db_credentials.json"
 
 FORMULA_FILE = f"{APP_PATH}/formulas/Perfume Archive/Vibe Formulas/1881 MEN - IMF022.pdf"
 
@@ -88,32 +84,24 @@ def preprocess(text, source='Perfume Archive/Vibe Formulas'):
 def clean_ingredient_name(ingredient_name):
     return filter_text(
         filter_text(
-            ingredient_name,
-            r"(IFF|FIRM|SYNA|SODA|KAO|GIV|ROBER|DPG|IPM|SYM|DRT|FCC|®|@|Natural|Symrise|Givaudan|Firmenich)"
-        ), r"[ \-\(\)]+$"
+            filter_text(
+                ingredient_name.upper(),
+                r"[ (\-](SYMRISE|GIVAUDAN|FIRMENICH|ROBERTET|BEDOUKIAN|DEPR|NATURAL|IFF|FIRM|SYNA|SODA|KAO|GIV|ROBER|DPG|IPM|SYM|DRT|FCC|®|@)"
+            ), r"((([ ]?\([^()]*\)|[., -])+$)|[()])",
+        ), r"[., -]+$",
     )
 
 
-def get_db_ingredient_synonyms():
-    with open(DB_CREDENTIALS_FILE) as f:
-        db_client = MariaDBClient(**json.load(f))
-
-    db_ingredients_rows = db_client.execute(
-        'SELECT name FROM pvault.ingredients')
-    # SELECT
-    # 	ing.name,
-    # 	COALESCE(syn.synonym, ing.name) AS synonym
-    # FROM pvault.ingredients ing
-    # LEFT JOIN pvault.synonyms syn ON ing.name=syn.ing;
-
-    db_ingredients_dict = {}
-
-    for db_ingredients_row in db_ingredients_rows:
-        cleaned_name = clean_ingredient_name(
-            db_ingredients_row["name"]).upper()
-        db_ingredients_dict[cleaned_name] = db_ingredients_row["name"]
-
-    return db_ingredients_dict
+def get_db_ingredient_synonyms(db_client):
+    synonyms_rows = db_client.execute(
+        'SELECT ing as name, synonym FROM pvault.synonyms')
+    
+    db_ingredient_synonyms = {}
+    
+    for synonyms_row in synonyms_rows:
+        db_ingredient_synonyms[synonyms_row['synonym']] = synonyms_row['name']
+        
+    return db_ingredient_synonyms
 
 
 def match_ingredients(target_string, db_ingredients):
@@ -173,61 +161,90 @@ def ingredient_match_inquiry(formula_ingredient, db_ingredient, similarity):
             return proposed_ingredient_name
 
 
-def translate_formula(formula, db_ingredient_synonyms_dict):
+def translate_formula(formula, db_ingredient_synonyms):
     translated_formula = {}
     new_ingredient_synonyms = {}
-    ingredient_synonyms = db_ingredient_synonyms_dict.keys()
+    ingredient_synonyms = db_ingredient_synonyms.keys()
 
     for formula_ingredient in formula:
         closest_string, max_similarity = match_ingredients(
             formula_ingredient['name'], ingredient_synonyms)
-        closest_db_ingredient = db_ingredient_synonyms_dict[closest_string]
+        closest_db_ingredient = db_ingredient_synonyms[closest_string]
         if max_similarity == 1:
             translated_formula[closest_db_ingredient] = formula_ingredient['quantity']
         else:
-            ingredient_answer = ingredient_match_inquiry(
-                formula_ingredient['name'], closest_db_ingredient, max_similarity)
+            ingredient_answer = ingredient_match_inquiry(formula_ingredient['name'], closest_db_ingredient, max_similarity)
             translated_formula[ingredient_answer] = formula_ingredient['quantity']
-            if ingredient_answer != closest_db_ingredient:
-                new_ingredient_synonyms[formula_ingredient['name']
-                                        ] = ingredient_answer
+            new_ingredient_synonyms[formula_ingredient['name']] = ingredient_answer
+            
 
     return translated_formula, new_ingredient_synonyms
 
 
+def insert_new_ingredient_synonyms(new_ingredient_synonyms, formula_name, db_client):
+    if len(new_ingredient_synonyms) > 0:
+        synonyms_dict = []
+        for synonym, ing in new_ingredient_synonyms.items():
+            synonyms_dict.append({
+                'synonym': synonym,
+                'ing': ing,
+                'source': f"Formula: {formula_name}",
+            })
+        
+        db_client.upsert(table_name="synonyms", data=synonyms_dict)
+
+
+def insert_new_formula(translated_formula, formula_file, db_client):
+    formula_data = {}
+    for formula_ingredient, quantity in translated_formula.items():
+        formula_data.append({
+            'name': formula_file,
+            'ingredient': formula_ingredient,
+            'quantity': quantity,
+        })
+        # Investigate all tables that we need to interact with, how the 'fid' id is generated
+        # and where it's used. Apparently, it's important to populate the ingredient list
+        # inside of the formula
+        
+    # db_client.upsert(table_name="ingredients", data=formula_data)
+
+
 if __name__ == "__main__":
-    sheet_ingredients = read_spreadsheet_materials(False)
-    ingredient_names = [sheet_ingredients[1] for sheet_ingredients in sheet_ingredients]
-    for ingredient_name in ingredient_names:
-        print(f"Original: {(ingredient_name + ' '*80)[:60]} | Cleaned: {clean_ingredient_name(ingredient_name)}")
+    INSERT_PROMPT = True
+    
+    with open(DB_CREDENTIALS_FILE) as f:
+        db_client = MariaDBClient(**json.load(f))
+    db_ingredient_synonyms = get_db_ingredient_synonyms(db_client)
+    
+    for formula_file in [FORMULA_FILE]:
+        formula = extract_structure_perfume_formula(formula_file)
 
-if __name__ == "__main__a":
-    db_ingredient_synonyms_dict = get_db_ingredient_synonyms()
-    formula = extract_structure_perfume_formula(FORMULA_FILE)
+        translated_formula, new_ingredient_synonyms = translate_formula(
+            formula, db_ingredient_synonyms)
 
-    # db_ingredient_synonyms_dict is updated by this function
-    translated_formula, new_ingredient_synonyms = translate_formula(
-        formula, db_ingredient_synonyms_dict)
+        print(translated_formula, "\n")
+        print(new_ingredient_synonyms, "\n")
+        
+        insert_answer = False
+        if INSERT_PROMPT:
+            insert_question = inquirer.List(
+                "question",
+                message=f'Insert formula and new ingredients?',
+                choices=[True, False],
+            )
+            insert_answer = inquirer.prompt([insert_question])["question"]
+        
+        if not INSERT_PROMPT or insert_answer:
+            insert_new_ingredient_synonyms(new_ingredient_synonyms, formula_file, db_client)
+            insert_new_formula(translated_formula, formula_file, db_client)
+        
+            db_ingredient_synonyms = {
+                **db_ingredient_synonyms,
+                **new_ingredient_synonyms,
+            }
+        
+        
 
-    print(translated_formula)
-    print(new_ingredient_synonyms)
-
-    # Run ingredient name cleaner though the existing ingredients and refine the cleaner,
-    # After refinement insert the initial synonyms in the database, try to do this through code
-    # especially code that enables us to insert the synonyms we are going to collect through
-    # pdf processing.
-
-    # We should think about reinserting the db_ingredient_synonyms_dict into the database
-    # or reinsert it every N formulas
-
-# IDEAS:
-# If similarity = 1 approve the match (we want to avoid false positives at all costs)
-# Keep track of synonyms using the pvault.synonyms and use them as additional strings to check
-# Keep track of false-positives using a custom table to automatically deny match (pvault.falseIngredientMatches)
-# Depending on similarity level, prompt user to check if the match is ok,
-# we can show match is similarity level is good or not show it at all if it's too bad
-# If user says it's not ok, ask if there's an existing ingredient and add the name to
-# the pvault.synonyms (add the pdf name as a synonym)
 # Create readers for different kinds of pdfs depending on pdf properties, including path
 
 # Steps:

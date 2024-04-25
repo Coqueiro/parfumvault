@@ -1,2 +1,2 @@
 ALTER TABLE ingCategory 
-  ADD UNIQUE KEY name (name); 
+  ADD UNIQUE KEY name (name);

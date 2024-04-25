@@ -6,12 +6,7 @@ from spreadsheet_client import GoogleSheetsReader
 from collections import OrderedDict
 
 from helper import transform_entry_in_dict_list, create_dict_list, filter_dict_list_by_keys
-
-
-APP_PATH = f"{os.getenv('HOME')}/Github/parfumvault/docker-compose/app"
-SPREADSHEET_CREDENTIALS_FILE = f"{APP_PATH}/credentials/spreadsheet_credentials.json"
-DB_CREDENTIALS_FILE = f"{APP_PATH}/credentials/db_credentials.json"
-MATERIALS_FILE = f"{APP_PATH}/spreadsheet_cache/materials.json"
+from constants import SPREADSHEET_CREDENTIALS_FILE, DB_CREDENTIALS_FILE, MATERIALS_FILE
 
 
 def read_spreadsheet_materials(fetch_remote):
