@@ -91,19 +91,26 @@ def clean_ingredient_name(ingredient_name):
         ), r"[ \-\(\)]+$"
     )
 
+
 def get_db_ingredient_synonyms():
     with open(DB_CREDENTIALS_FILE) as f:
         db_client = MariaDBClient(**json.load(f))
 
     db_ingredients_rows = db_client.execute(
         'SELECT name FROM pvault.ingredients')
-    
+    # SELECT
+    # 	ing.name,
+    # 	COALESCE(syn.synonym, ing.name) AS synonym
+    # FROM pvault.ingredients ing
+    # LEFT JOIN pvault.synonyms syn ON ing.name=syn.ing;
+
     db_ingredients_dict = {}
-    
+
     for db_ingredients_row in db_ingredients_rows:
-        cleaned_name = clean_ingredient_name(db_ingredients_row["name"]).upper()
+        cleaned_name = clean_ingredient_name(
+            db_ingredients_row["name"]).upper()
         db_ingredients_dict[cleaned_name] = db_ingredients_row["name"]
-    
+
     return db_ingredients_dict
 
 
@@ -152,10 +159,12 @@ def ingredient_match_inquiry(formula_ingredient, db_ingredient, similarity):
     choice = is_match_answer["question"]
 
     if choice == choices[0]:
-        return db_ingredient    
+        return db_ingredient
     elif choice == choices[1]:
-        proposed_ingredient_name = clean_ingredient_name(formula_ingredient).title()
-        text_input = input(f"Enter db ingredient name [{proposed_ingredient_name}]: ")
+        proposed_ingredient_name = clean_ingredient_name(
+            formula_ingredient).title()
+        text_input = input(
+            f"Enter db ingredient name [{proposed_ingredient_name}]: ")
         if len(text_input) > 0:
             return text_input
         else:
@@ -166,42 +175,51 @@ def translate_formula(formula, db_ingredient_synonyms_dict):
     translated_formula = {}
     new_ingredient_synonyms = {}
     ingredient_synonyms = db_ingredient_synonyms_dict.keys()
-    
+
     for formula_ingredient in formula:
         closest_string, max_similarity = match_ingredients(
             formula_ingredient['name'], ingredient_synonyms)
         closest_db_ingredient = db_ingredient_synonyms_dict[closest_string]
         if max_similarity == 1:
-            translated_formula[closest_db_ingredient] = formula_ingredient['quantity'] 
+            translated_formula[closest_db_ingredient] = formula_ingredient['quantity']
         else:
-            ingredient_answer = ingredient_match_inquiry(formula_ingredient['name'], closest_db_ingredient, max_similarity)
+            ingredient_answer = ingredient_match_inquiry(
+                formula_ingredient['name'], closest_db_ingredient, max_similarity)
             translated_formula[ingredient_answer] = formula_ingredient['quantity']
-            if ingredient_answer!=closest_db_ingredient:
-                new_ingredient_synonyms[formula_ingredient['name']] = ingredient_answer
-    
+            if ingredient_answer != closest_db_ingredient:
+                new_ingredient_synonyms[formula_ingredient['name']
+                                        ] = ingredient_answer
+
     return translated_formula, new_ingredient_synonyms
+
 
 if __name__ == "__main__":
     db_ingredient_synonyms_dict = get_db_ingredient_synonyms()
     formula = extract_structure_perfume_formula(FORMULA_FILE)
-    
-    # db_ingredient_synonyms_dict is updated by this function 
-    translated_formula, new_ingredient_synonyms = translate_formula(formula, db_ingredient_synonyms_dict)
-    
+
+    # db_ingredient_synonyms_dict is updated by this function
+    translated_formula, new_ingredient_synonyms = translate_formula(
+        formula, db_ingredient_synonyms_dict)
+
     print(translated_formula)
     print(new_ingredient_synonyms)
-    
+
+    # Run ingredient name cleaner though the existing ingredients and refine the cleaner,
+    # After refinement insert the initial synonyms in the database, try to do this through code
+    # especially code that enables us to insert the synonyms we are going to collect through
+    # pdf processing.
+
     # We should think about reinserting the db_ingredient_synonyms_dict into the database
     # or reinsert it every N formulas
-                
+
 # IDEAS:
 # If similarity = 1 approve the match (we want to avoid false positives at all costs)
 # Keep track of synonyms using the pvault.synonyms and use them as additional strings to check
 # Keep track of false-positives using a custom table to automatically deny match (pvault.falseIngredientMatches)
-# Depending on similarity level, prompt user to check if the match is ok, 
-## we can show match is similarity level is good or not show it at all if it's too bad
-# If user says it's not ok, ask if there's an existing ingredient and add the name to 
-## the pvault.synonyms (add the pdf name as a synonym)
+# Depending on similarity level, prompt user to check if the match is ok,
+# we can show match is similarity level is good or not show it at all if it's too bad
+# If user says it's not ok, ask if there's an existing ingredient and add the name to
+# the pvault.synonyms (add the pdf name as a synonym)
 # Create readers for different kinds of pdfs depending on pdf properties, including path
 
 # Steps:
