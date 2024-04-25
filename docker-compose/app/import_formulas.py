@@ -1,15 +1,14 @@
 import json
 import os
 import re
-
+import inquirer
 import nltk
 import PyPDF2
 from db_client import MariaDBClient
 from nltk.corpus import stopwords
-from nltk.metrics.distance import jaro_similarity, jaro_winkler_similarity
+from nltk.metrics.distance import jaro_winkler_similarity
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
-
 
 APP_PATH = f"{os.getenv('HOME')}/Github/parfumvault/docker-compose/app"
 DB_CREDENTIALS_FILE = f"{APP_PATH}/credentials/db_credentials.json"
@@ -37,8 +36,8 @@ def text_similarity(text1, text2):
     tokens1 = word_tokenize(text1)
     tokens2 = word_tokenize(text2)
     lemmatizer = WordNetLemmatizer()
-    tokens1 = [lemmatizer.lemmatize(token).lower() for token in tokens1]
-    tokens2 = [lemmatizer.lemmatize(token).lower() for token in tokens2]
+    tokens1 = [lemmatizer.lemmatize(token) for token in tokens1]
+    tokens2 = [lemmatizer.lemmatize(token) for token in tokens2]
 
     stop_words = stopwords.words('english')
     tokens1 = ' '.join([token for token in tokens1 if token not in stop_words])
@@ -83,23 +82,28 @@ def preprocess(text, source='Perfume Archive/Vibe Formulas'):
     return filtered_text
 
 
-def get_db_ingredients():
+def clean_ingredient_name(ingredient_name):
+    return filter_text(
+        filter_text(
+            ingredient_name,
+            r"(IFF|FIRM|SYNA|SODA|KAO|GIV|ROBER|DPG|IPM|SYM|DRT|FCC|®|@|Natural|Symrise|Givaudan|Firmenich)"
+        ), r"[ \-\(\)]+$"
+    )
+
+def get_db_ingredient_synonyms():
     with open(DB_CREDENTIALS_FILE) as f:
         db_client = MariaDBClient(**json.load(f))
 
-    db_ingredients_results = db_client.execute(
+    db_ingredients_rows = db_client.execute(
         'SELECT name FROM pvault.ingredients')
-    return [
-        db_ingredients_result["name"] for db_ingredients_result in db_ingredients_results
-    ], [
-        filter_text(
-            filter_text(
-                db_ingredients_result["name"],
-                r"(IFF|FIRM|SYNA|SODA|KAO|GIV|ROBER|DPG|IPM|SYM|DRT|FCC|®|@|Natural|Symrise|Givaudan|Firmenich)"
-            ), r"[ \-\(\)]+$"
-        )
-        for db_ingredients_result in db_ingredients_results
-    ]
+    
+    db_ingredients_dict = {}
+    
+    for db_ingredients_row in db_ingredients_rows:
+        cleaned_name = clean_ingredient_name(db_ingredients_row["name"]).upper()
+        db_ingredients_dict[cleaned_name] = db_ingredients_row["name"]
+    
+    return db_ingredients_dict
 
 
 def match_ingredients(target_string, db_ingredients):
@@ -130,42 +134,74 @@ def extract_structure_perfume_formula(pdf_path):
     for formula_ingredient_result in formula_ingredients_result:
         name, quantity = formula_ingredient_result
         formula_ingredients.append({
-            'name': name,
+            'name': name.upper(),
             'quantity': float(quantity),
         })
     return formula_ingredients
 
 
-if __name__ == "__main__":
-    db_ingredients, db_cleaned_ingredients = get_db_ingredients()
-    formula_ingredients = extract_structure_perfume_formula(FORMULA_FILE)
+def ingredient_match_inquiry(formula_ingredient, db_ingredient, similarity):
+    choices = [f"Yes ({round(similarity,2)})", "No"]
+    is_match_question = inquirer.List(
+        "question",
+        message=f"Formula ingredient '{formula_ingredient}' == '{db_ingredient}' [db]",
+        choices=choices,
+    )
+    is_match_answer = inquirer.prompt([is_match_question])
+    choice = is_match_answer["question"]
 
-    counter = 0
-    for formula_ingredient in formula_ingredients:
-        closest_cleaned_string, max_similarity = match_ingredients(
-            formula_ingredient['name'], db_cleaned_ingredients)
-        closest_string = db_ingredients[db_cleaned_ingredients.index(closest_cleaned_string)]
-        if max_similarity > 0.9:
-            counter += 1
-            print(
-                f"Original: {formula_ingredient['name']}",
-                f"Match: {closest_string}",
-                f"Similarity: {max_similarity}"
-            )
-    print(counter)
-        # IDEAS:
-        # If similarity = 1 approve the match (we want to avoid false positives at all costs)
-        # Keep track of synonyms using the pvault.synonyms and use them as additional strings to check
-        # Keep track of false-positives using a custom table to automatically deny match (pvault.falseIngredientMatches)
-        # Depending on similarity level, prompt user to check if the match is ok, 
-        ## we can show match is similarity level is good or not show it at all if it's too bad
-        # If user says it's not ok, ask if there's an existing ingredient and add the name to 
-        ## the pvault.synonyms (add the pdf name as a synonym)
-        # Create readers for different kinds of pdfs depending on pdf properties, including path
-        
-        # Steps:
-        # 1. Formula extraction
-        # 2. Ingredient matching
-        # 3. Formula writing to database
-        
-        # We start with 2 for a single formula, then 3, then 1 to scale to writing all formulas
+    if choice == choices[0]:
+        return db_ingredient    
+    elif choice == choices[1]:
+        proposed_ingredient_name = clean_ingredient_name(formula_ingredient).title()
+        text_input = input(f"Enter db ingredient name [{proposed_ingredient_name}]: ")
+        if len(text_input) > 0:
+            return text_input
+        else:
+            return proposed_ingredient_name
+
+
+def translate_formula(formula, db_ingredient_synonyms_dict):
+    translated_formula = {}
+    ingredient_synonyms = db_ingredient_synonyms_dict.keys()
+    
+    for formula_ingredient in formula:
+        closest_string, max_similarity = match_ingredients(
+            formula_ingredient['name'], ingredient_synonyms)
+        closest_db_ingredient = db_ingredient_synonyms_dict[closest_string]
+        if max_similarity == 1:
+            translated_formula[closest_db_ingredient] = formula_ingredient['quantity'] 
+        else:
+            ingredient_answer = ingredient_match_inquiry(formula_ingredient['name'], closest_db_ingredient, max_similarity)
+            translated_formula[ingredient_answer] = formula_ingredient['quantity']
+            db_ingredient_synonyms_dict[formula_ingredient['name']] = ingredient_answer # Updating the dict globally
+    
+    return translated_formula
+
+if __name__ == "__main__":
+    db_ingredient_synonyms_dict = get_db_ingredient_synonyms()
+    formula = extract_structure_perfume_formula(FORMULA_FILE)
+    
+    translated_formula = translate_formula(formula, db_ingredient_synonyms_dict)
+    
+    print(translated_formula)
+    
+    # We should think about reinserting the db_ingredient_synonyms_dict into the database
+    # or reinsert it every N formulas
+                
+# IDEAS:
+# If similarity = 1 approve the match (we want to avoid false positives at all costs)
+# Keep track of synonyms using the pvault.synonyms and use them as additional strings to check
+# Keep track of false-positives using a custom table to automatically deny match (pvault.falseIngredientMatches)
+# Depending on similarity level, prompt user to check if the match is ok, 
+## we can show match is similarity level is good or not show it at all if it's too bad
+# If user says it's not ok, ask if there's an existing ingredient and add the name to 
+## the pvault.synonyms (add the pdf name as a synonym)
+# Create readers for different kinds of pdfs depending on pdf properties, including path
+
+# Steps:
+# 1. Formula extraction
+# 2. Ingredient matching
+# 3. Formula writing to database
+
+# We start with 2 for a single formula, then 3, then 1 to scale to writing all formulas
