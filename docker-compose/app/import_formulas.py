@@ -11,6 +11,8 @@ from nltk.metrics.distance import jaro_winkler_similarity
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 
+from import_spreadsheet import read_spreadsheet_materials
+
 APP_PATH = f"{os.getenv('HOME')}/Github/parfumvault/docker-compose/app"
 DB_CREDENTIALS_FILE = f"{APP_PATH}/credentials/db_credentials.json"
 
@@ -194,6 +196,12 @@ def translate_formula(formula, db_ingredient_synonyms_dict):
 
 
 if __name__ == "__main__":
+    sheet_ingredients = read_spreadsheet_materials(False)
+    ingredient_names = [sheet_ingredients[1] for sheet_ingredients in sheet_ingredients]
+    for ingredient_name in ingredient_names:
+        print(f"Original: {(ingredient_name + ' '*80)[:60]} | Cleaned: {clean_ingredient_name(ingredient_name)}")
+
+if __name__ == "__main__a":
     db_ingredient_synonyms_dict = get_db_ingredient_synonyms()
     formula = extract_structure_perfume_formula(FORMULA_FILE)
 
