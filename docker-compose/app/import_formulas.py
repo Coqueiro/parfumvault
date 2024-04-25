@@ -164,6 +164,7 @@ def ingredient_match_inquiry(formula_ingredient, db_ingredient, similarity):
 
 def translate_formula(formula, db_ingredient_synonyms_dict):
     translated_formula = {}
+    new_ingredient_synonyms = {}
     ingredient_synonyms = db_ingredient_synonyms_dict.keys()
     
     for formula_ingredient in formula:
@@ -175,18 +176,20 @@ def translate_formula(formula, db_ingredient_synonyms_dict):
         else:
             ingredient_answer = ingredient_match_inquiry(formula_ingredient['name'], closest_db_ingredient, max_similarity)
             translated_formula[ingredient_answer] = formula_ingredient['quantity']
-            db_ingredient_synonyms_dict[formula_ingredient['name']] = ingredient_answer
+            if ingredient_answer==closest_db_ingredient:
+                new_ingredient_synonyms[formula_ingredient['name']] = ingredient_answer
     
-    return translated_formula
+    return translated_formula, new_ingredient_synonyms
 
 if __name__ == "__main__":
     db_ingredient_synonyms_dict = get_db_ingredient_synonyms()
     formula = extract_structure_perfume_formula(FORMULA_FILE)
     
     # db_ingredient_synonyms_dict is updated by this function 
-    translated_formula = translate_formula(formula, db_ingredient_synonyms_dict)
+    translated_formula, new_ingredient_synonyms = translate_formula(formula, db_ingredient_synonyms_dict)
     
     print(translated_formula)
+    print(new_ingredient_synonyms)
     
     # We should think about reinserting the db_ingredient_synonyms_dict into the database
     # or reinsert it every N formulas
