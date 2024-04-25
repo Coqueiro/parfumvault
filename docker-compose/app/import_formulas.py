@@ -1,6 +1,7 @@
 import json
 import os
 import re
+
 import inquirer
 import nltk
 import PyPDF2
@@ -174,7 +175,7 @@ def translate_formula(formula, db_ingredient_synonyms_dict):
         else:
             ingredient_answer = ingredient_match_inquiry(formula_ingredient['name'], closest_db_ingredient, max_similarity)
             translated_formula[ingredient_answer] = formula_ingredient['quantity']
-            db_ingredient_synonyms_dict[formula_ingredient['name']] = ingredient_answer # Updating the dict globally
+            db_ingredient_synonyms_dict[formula_ingredient['name']] = ingredient_answer
     
     return translated_formula
 
@@ -182,6 +183,7 @@ if __name__ == "__main__":
     db_ingredient_synonyms_dict = get_db_ingredient_synonyms()
     formula = extract_structure_perfume_formula(FORMULA_FILE)
     
+    # db_ingredient_synonyms_dict is updated by this function 
     translated_formula = translate_formula(formula, db_ingredient_synonyms_dict)
     
     print(translated_formula)
