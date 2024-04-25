@@ -176,7 +176,7 @@ def translate_formula(formula, db_ingredient_synonyms_dict):
         else:
             ingredient_answer = ingredient_match_inquiry(formula_ingredient['name'], closest_db_ingredient, max_similarity)
             translated_formula[ingredient_answer] = formula_ingredient['quantity']
-            if ingredient_answer==closest_db_ingredient:
+            if ingredient_answer!=closest_db_ingredient:
                 new_ingredient_synonyms[formula_ingredient['name']] = ingredient_answer
     
     return translated_formula, new_ingredient_synonyms
@@ -189,11 +189,7 @@ if __name__ == "__main__":
     translated_formula, new_ingredient_synonyms = translate_formula(formula, db_ingredient_synonyms_dict)
     
     print(translated_formula)
-    print(new_ingredient_synonyms) # Tá com bug, retornando tudo
- 
-#  {'Galaxolide (Musk G)': 22.0, 'Patchouli EO': 7.71, 'Vertofix Coeur': 7.5, 'Tonalide or Tetralide': 7.4, 'Dihydromircenol or Dihydro Myrcenol': 6.0, 'Hexyl Cinnamic Aldehyde': 5.7, 'Boisambrene Forte': 5.6, 'Hedione (Firmenich)': 5.1, 'Bergamot EO Rectified': 5.0, 'Iso E Super - IFF': 4.8, 'Cypress Oil (Spain)': 3.0, 'Isoraldeine 70 - Givaudan or Iralia': 2.9, 'CITRONELLOL COEUR (IFF)': 2.0, 'Lyral': 1.7, 'Hydroxycitronellal': 1.3, 'Lavandin Grosso EO - France': 1.3, 'Oakmoss Absolute 10%': 1.2, 'Cedryl Acetate': 1.0, 'Phenethyl Alcohol (Phenyl Ethyl Alcohol)': 1.0, 'Linalool': 1.0, 'Galbanum Resinoid': 0.9, 'Musk Ketone': 0.8, 'Amyl Salicylate': 0.6, 'Benzyl Acetate': 0.5, 'Styrallyl Acetate': 0.4, 'Basil, sweet EO (France)': 0.4, 'Allyl Amyl Glycolate (IFF)': 0.3, 'Coumarin (crystal powder)': 0.3, 'Ylang EO': 0.3, 'Sandalore (Givaudan)': 0.3, 'Cashmeran (IFF)': 0.3, 'Geraniol Extra': 0.2, 'Cedarwood Virginia EO': 0.2, 'Clove Bud EO': 0.2, 'Cinnamyl Acetate': 0.2, 'Guaiyl Acetate': 0.1, 'Cyclamen Aldehyde': 0.1, 'Styrax (Storax) Essence': 0.1, 'Phenethyl Phenylacetate': 0.1, 'Stemone': 0.08, 'Aldehyde C-8': 0.07, 'Aldehyde C-11 Undecylenic': 0.07, 'Aldehyde C-10': 0.04, 'Hydratropic Aldehyde': 0.03}
-
-# {'GALAXOLIDE 50': 'Galaxolide (Musk G)', 'PATCHOULI OIL': 'Patchouli EO', 'TONALIDE': 'Tonalide or Tetralide', 'DIHYDROMYRCENOL': 'Dihydromircenol or Dihydro Myrcenol', 'BERGAMOT OIL BRASIL': 'Bergamot EO Rectified', 'CYPRESS OIL -SEMPERVIRENS-': 'Cypress Oil (Spain)', 'ISORALDEINE 70': 'Isoraldeine 70 - Givaudan or Iralia', 'CITRONELLOL EXTRA': 'CITRONELLOL COEUR (IFF)', 'HYDROXYCITRONELLAL EXTRA': 'Hydroxycitronellal', 'LAVANDIN OIL ABRIALIS': 'Lavandin Grosso EO - France', 'OAKMOSS ABSOLUTE': 'Oakmoss Absolute 10%', 'PHENYL ETHYL ALCOHOL': 'Phenethyl Alcohol (Phenyl Ethyl Alcohol)', 'MUSKE KETONE': 'Musk Ketone', 'BASIL OIL': 'Basil, sweet EO (France)', 'COUMARIN': 'Coumarin (crystal powder)', 'SANDALORE (GIV.)': 'Sandalore (Givaudan)', 'CASHMERAN (IFF)': 'Cashmeran (IFF)', 'CEDARWOOD OIL VIRGINIA': 'Cedarwood Virginia EO', 'CLOVE LEAF OIL': 'Clove Bud EO', 'CLOVE BUD OIL': 'Clove Bud EO', 'STYRAX OIL': 'Styrax (Storax) Essence'}   
+    print(new_ingredient_synonyms)
     
     # We should think about reinserting the db_ingredient_synonyms_dict into the database
     # or reinsert it every N formulas
