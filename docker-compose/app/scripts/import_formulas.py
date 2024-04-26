@@ -1,3 +1,4 @@
+import hashlib
 import json
 import re
 
@@ -11,8 +12,8 @@ from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 from constants import DB_CREDENTIALS_FILE, APP_PATH
 
-
-FORMULA_FILE = f"{APP_PATH}/formulas/Perfume Archive/Vibe Formulas/1881 MEN - IMF022.pdf"
+FORMULAS_PATH = f"{APP_PATH}/formulas/"
+FORMULA_FILE = f"{FORMULAS_PATH}Perfume Archive/Vibe Formulas/1881 MEN - IMF022.pdf"
 
 
 nltk.download('stopwords')
@@ -104,6 +105,18 @@ def get_db_ingredient_synonyms(db_client):
     return db_ingredient_synonyms
 
 
+def get_db_ingredient_ids(db_client):
+    ingredients_rows = db_client.execute(
+        'SELECT id, name FROM pvault.ingredients')
+    
+    db_ingredient_ids = {}
+    
+    for ingredients_row in ingredients_rows:
+        db_ingredient_ids[ingredients_row['name']] = ingredients_row['id']
+        
+    return db_ingredient_ids
+
+
 def match_ingredients(target_string, db_ingredients):
     closest_string, max_similarity = find_closest_match(
         target_string, db_ingredients)
@@ -113,21 +126,21 @@ def match_ingredients(target_string, db_ingredients):
 
 def extract_perfume_formula(pdf_path):
     pdf_reader = PyPDF2.PdfReader(pdf_path)
-    raw_text = ""
+    raw_file_extract = ""
     for page_num in range(len(pdf_reader.pages)):
         page = pdf_reader.pages[page_num]
-        raw_text += '\n' + page.extract_text()
+        raw_file_extract += '\n' + page.extract_text()
 
-    preprocess_text = preprocess(raw_text)
+    preprocess_text = preprocess(raw_file_extract)
 
     pattern = r"([\w0-9 ()-.]+)[ ]+([0-9\.]+)$"
     ingredients_text = re.findall(pattern, preprocess_text, flags=re.MULTILINE)
 
-    return ingredients_text
+    return ingredients_text, raw_file_extract
 
 
 def extract_structure_perfume_formula(pdf_path):
-    formula_ingredients_result = extract_perfume_formula(pdf_path)
+    formula_ingredients_result, raw_file_extract = extract_perfume_formula(pdf_path)
     formula_ingredients = []
     for formula_ingredient_result in formula_ingredients_result:
         name, quantity = formula_ingredient_result
@@ -135,7 +148,7 @@ def extract_structure_perfume_formula(pdf_path):
             'name': name.upper(),
             'quantity': float(quantity),
         })
-    return formula_ingredients
+    return formula_ingredients, raw_file_extract
 
 
 def ingredient_match_inquiry(formula_ingredient, db_ingredient, similarity):
@@ -194,19 +207,53 @@ def insert_new_ingredient_synonyms(new_ingredient_synonyms, formula_name, db_cli
         db_client.upsert(table_name="synonyms", data=synonyms_dict)
 
 
-def insert_new_formula(translated_formula, formula_file, db_client):
-    formula_data = {}
+def insert_new_formula(translated_formula, relative_formula_path, formula_file, raw_file_extract, db_ingredient_ids, db_client):
+    fid = hashlib.sha256(bytes(relative_formula_path, 'utf-8')).hexdigest()[:40]
+    formulasMetaData_data = []
+    formulasMetaData_data.append({
+        'name': formula_file,
+        'fid': fid,
+        'sex': '',
+        'notes': raw_file_extract, # Raw text extracted from PDF
+        'catClass': 'cat4', # Fine fragrance category
+        'status': 2, # Under evaluation
+    })
+    db_client.upsert(table_name="formulasMetaData", data=formulasMetaData_data)
+    formula_id_result = formula_id = db_client.execute(
+        f"SELECT id FROM pvault.formulasMetaData WHERE fid = '{fid}'"
+    )
+    formula_id = formula_id_result[0]['id']
+
+    formulasTags_data = []
+    formulasTags_data.append({
+        'formula_id': formula_id,
+        'tag_name': '/'.join(relative_formula_path.split('/')[:-1]), # Folder of formula file
+    })
+    formulasTags_data[0]['tag_hash'] = int(str(int(hashlib.sha256(bytes(
+        formulasTags_data[0]['tag_name']+str(formulasTags_data[0]['formula_id']), 'utf-8')
+    ).hexdigest(), 16))[:9])
+    db_client.upsert(table_name="formulasTags", data=formulasTags_data)
+    
+    formulas_data = []
+    formula_history_data = []
     for formula_ingredient, quantity in translated_formula.items():
-        formula_data.append({
+        fid_ingredient_hash = int(str(int(hashlib.sha256(bytes(fid+formula_ingredient, 'utf-8')).hexdigest(), 16))[:9])
+        formulas_data.append({
+            'fid': fid,
             'name': formula_file,
             'ingredient': formula_ingredient,
+            'ingredient_id': db_ingredient_ids.get(formula_ingredient),
             'quantity': quantity,
+            'fid_ingredient_hash': fid_ingredient_hash,
         })
-        # Investigate all tables that we need to interact with, how the 'fid' id is generated
-        # and where it's used. Apparently, it's important to populate the ingredient list
-        # inside of the formula
-        
-    # db_client.upsert(table_name="ingredients", data=formula_data)
+        formula_history_data.append({
+            'fid': fid,
+            'change_made': f"ADDED: {formula_ingredient} {quantity}g @100%",
+            'user': 'import_formulas',
+            'fid_ingredient_hash': fid_ingredient_hash,
+        })
+    db_client.upsert(table_name="formulas", data=formulas_data)
+    db_client.upsert(table_name="formula_history", data=formula_history_data)
 
 
 if __name__ == "__main__":
@@ -215,9 +262,10 @@ if __name__ == "__main__":
     with open(DB_CREDENTIALS_FILE) as f:
         db_client = MariaDBClient(**json.load(f))
     db_ingredient_synonyms = get_db_ingredient_synonyms(db_client)
+    db_ingredient_ids = get_db_ingredient_ids(db_client)
     
-    for formula_file in [FORMULA_FILE]:
-        formula = extract_structure_perfume_formula(formula_file)
+    for formula_path in [FORMULA_FILE]:
+        formula, raw_file_extract = extract_structure_perfume_formula(formula_path)
 
         translated_formula, new_ingredient_synonyms = translate_formula(
             formula, db_ingredient_synonyms)
@@ -235,9 +283,10 @@ if __name__ == "__main__":
             insert_answer = inquirer.prompt([insert_question])["question"]
         
         if not INSERT_PROMPT or insert_answer:
+            relative_formula_path = formula_path.replace(FORMULAS_PATH, '')
+            formula_file = relative_formula_path.split('/')[-1].replace('.pdf', '')
             insert_new_ingredient_synonyms(new_ingredient_synonyms, formula_file, db_client)
-            insert_new_formula(translated_formula, formula_file, db_client)
-        
+            insert_new_formula(translated_formula, relative_formula_path, formula_file, raw_file_extract, db_ingredient_ids, db_client)
             db_ingredient_synonyms = {
                 **db_ingredient_synonyms,
                 **new_ingredient_synonyms,
