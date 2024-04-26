@@ -272,6 +272,8 @@ if __name__ == "__main__":
 
         print(translated_formula, "\n")
         print(new_ingredient_synonyms, "\n")
+        # TODO: Change format to show ingredients and quantities in a table
+        # TODO: Add sum of quantities to help understand if pdf was correctly processed (should be 100 or 1000 in most of the times)
         
         insert_answer = False
         if INSERT_PROMPT:
@@ -297,7 +299,7 @@ if __name__ == "__main__":
 # Create readers for different kinds of pdfs depending on pdf properties, including path
 
 # Steps:
-# 1. Formula extraction
+# TODO: 1. Formula extraction
 # 2. Ingredient matching
 # 3. Formula writing to database
 
