@@ -204,8 +204,7 @@ def ingredient_match_inquiry(formula_ingredient, db_ingredient, similarity, raw_
     elif choice == choices[1]:
         proposed_ingredient_name = clean_ingredient_name(
             formula_ingredient).title()
-        text_input = input(
-            f"Enter db ingredient name [{proposed_ingredient_name}]: ")
+        text_input = inquirer.prompt([inquirer.Text('text', message=f"Enter db ingredient name [{proposed_ingredient_name}]: ")])['text']
         if len(text_input) > 0:
             return text_input
         else:
@@ -347,6 +346,7 @@ if __name__ == "__main__":
     db_ingredient_ids = get_db_ingredient_ids(db_client)
 
     formula_files = [item for sub_list in create_pdf_dictionary(FORMULAS_PATH).values() for item in sub_list]
+    
     start_index = int(input(f"Start from which index [0]: ") or 0)
     
     for index, formula_path in enumerate(formula_files[start_index:]):
