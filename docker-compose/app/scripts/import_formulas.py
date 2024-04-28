@@ -204,7 +204,7 @@ def ingredient_match_inquiry(formula_ingredient, db_ingredient, similarity, raw_
     elif choice == choices[1]:
         proposed_ingredient_name = clean_ingredient_name(
             formula_ingredient).title()
-        text_input = inquirer.prompt([inquirer.Text('text', message=f"Enter db ingredient name [{proposed_ingredient_name}]: ")])['text']
+        text_input = inquirer.prompt([inquirer.Text('text', message=f"Enter db ingredient name [{proposed_ingredient_name}]")])['text']
         if len(text_input) > 0:
             return text_input
         else:
