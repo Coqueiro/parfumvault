@@ -347,6 +347,7 @@ if __name__ == "__main__":
     start_index = int(input(f"Start from which index [0]: ") or 0)
     
     for index, formula_path in enumerate(formula_files[start_index:]):
+        # TODO: Remove usage of this to avoid creating ids on top of relative paths which we want to change depending on formulas_path
         relative_formula_path = formula_path.replace(FORMULAS_PATH, '')
         formula_file = relative_formula_path.split('/')[-1].replace('.pdf', '')
         header_text = f"""[index {start_index+index}]
