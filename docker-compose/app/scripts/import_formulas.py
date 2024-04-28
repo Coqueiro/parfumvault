@@ -1,5 +1,6 @@
 import hashlib
 import json
+import pydoc
 import re
 
 import inquirer
@@ -13,7 +14,11 @@ from nltk.tokenize import word_tokenize
 from constants import DB_CREDENTIALS_FILE, APP_PATH
 
 FORMULAS_PATH = f"{APP_PATH}/formulas/"
-FORMULA_FILE = f"{FORMULAS_PATH}Perfume Archive/Vibe Formulas/1881 MEN - IMF022.pdf"
+FORMULA_FILES = [
+    # f"{FORMULAS_PATH}Perfume Archive/Vibe Formulas/1881 MEN - IMF022.pdf",
+    f"{FORMULAS_PATH}Perfume Archive/Vibe Formulas/XERYUS ROUGE HOMME - IMF237.pdf",
+    f"{FORMULAS_PATH}Perfume Archive/Vibe Formulas/XS PACO RAB. 1994 - IMF238.pdf",
+]
 
 
 nltk.download('stopwords')
@@ -133,7 +138,7 @@ def extract_perfume_formula(pdf_path):
 
     preprocess_text = preprocess(raw_file_extract)
 
-    pattern = r"([\w0-9 ()-.]+)[ ]+([0-9\.]+)$"
+    pattern = r"([\w0-9 ()-.%/,]+)[ ]+([0-9.]+)$"
     ingredients_text = re.findall(pattern, preprocess_text, flags=re.MULTILINE)
 
     return ingredients_text, raw_file_extract
@@ -151,8 +156,8 @@ def extract_structure_perfume_formula(pdf_path):
     return formula_ingredients, raw_file_extract
 
 
-def ingredient_match_inquiry(formula_ingredient, db_ingredient, similarity):
-    choices = [f"Yes ({round(similarity,2)})", "No"]
+def ingredient_match_inquiry(formula_ingredient, db_ingredient, similarity, raw_file_extract):
+    choices = [f"Yes ({round(similarity,2)})", "No", "Read extract"]
     is_match_question = inquirer.List(
         "question",
         message=f"Formula ingredient '{formula_ingredient}' == '{db_ingredient}' [db]",
@@ -172,9 +177,12 @@ def ingredient_match_inquiry(formula_ingredient, db_ingredient, similarity):
             return text_input
         else:
             return proposed_ingredient_name
+    elif choice == choices[2]:
+        pydoc.pager(f"{raw_file_extract}\n{formula}")
+        return ingredient_match_inquiry(formula_ingredient, db_ingredient, similarity, raw_file_extract)
 
 
-def translate_formula(formula, db_ingredient_synonyms):
+def translate_formula(formula, db_ingredient_synonyms, raw_file_extract):
     translated_formula = {}
     new_ingredient_synonyms = {}
     ingredient_synonyms = db_ingredient_synonyms.keys()
@@ -186,7 +194,8 @@ def translate_formula(formula, db_ingredient_synonyms):
         if max_similarity == 1:
             translated_formula[closest_db_ingredient] = formula_ingredient['quantity']
         else:
-            ingredient_answer = ingredient_match_inquiry(formula_ingredient['name'], closest_db_ingredient, max_similarity)
+            ingredient_answer = ingredient_match_inquiry(
+                formula_ingredient['name'], closest_db_ingredient, max_similarity, raw_file_extract)
             translated_formula[ingredient_answer] = formula_ingredient['quantity']
             new_ingredient_synonyms[formula_ingredient['name']] = ingredient_answer
             
@@ -256,6 +265,14 @@ def insert_new_formula(translated_formula, relative_formula_path, formula_file, 
     db_client.upsert(table_name="formula_history", data=formula_history_data)
 
 
+def simple_dict_table(dictionary):
+    table = ''
+    first_column_size = max([0]+[len(value) for value in dictionary.keys()])
+    for key, value in dictionary.items():
+        table += f"   {(key + ' '*first_column_size)[:first_column_size]} | {value}\n"
+    return table
+
+
 if __name__ == "__main__":
     INSERT_PROMPT = True
     
@@ -264,35 +281,47 @@ if __name__ == "__main__":
     db_ingredient_synonyms = get_db_ingredient_synonyms(db_client)
     db_ingredient_ids = get_db_ingredient_ids(db_client)
     
-    for formula_path in [FORMULA_FILE]:
+    for formula_path in FORMULA_FILES:
         formula, raw_file_extract = extract_structure_perfume_formula(formula_path)
 
         translated_formula, new_ingredient_synonyms = translate_formula(
-            formula, db_ingredient_synonyms)
+            formula, db_ingredient_synonyms, raw_file_extract)
 
-        print(translated_formula, "\n")
-        print(new_ingredient_synonyms, "\n")
-        # TODO: Change format to show ingredients and quantities in a table
-        # TODO: Add sum of quantities to help understand if pdf was correctly processed (should be 100 or 1000 in most of the times)
+        relative_formula_path = formula_path.replace(FORMULAS_PATH, '')
+        formula_file = relative_formula_path.split('/')[-1].replace('.pdf', '')
+
+        validation_text = f"""{formula_file}
+        
+{simple_dict_table(translated_formula)}
+Total quantity: {round(sum(translated_formula.values()),2)}\n
+{simple_dict_table(new_ingredient_synonyms)}"""
+
+        pydoc.pager(validation_text)
+        print(validation_text)
         
         insert_answer = False
         if INSERT_PROMPT:
-            insert_question = inquirer.List(
-                "question",
-                message=f'Insert formula and new ingredients?',
-                choices=[True, False],
-            )
-            insert_answer = inquirer.prompt([insert_question])["question"]
-        
-        if not INSERT_PROMPT or insert_answer:
-            relative_formula_path = formula_path.replace(FORMULAS_PATH, '')
-            formula_file = relative_formula_path.split('/')[-1].replace('.pdf', '')
-            insert_new_ingredient_synonyms(new_ingredient_synonyms, formula_file, db_client)
-            insert_new_formula(translated_formula, relative_formula_path, formula_file, raw_file_extract, db_ingredient_ids, db_client)
-            db_ingredient_synonyms = {
-                **db_ingredient_synonyms,
-                **new_ingredient_synonyms,
-            }
+            repeat_choice = "Read extract"
+            insert_answer = repeat_choice
+            while insert_answer == repeat_choice:
+                insert_question = inquirer.List(
+                    "question",
+                    message=f'Insert formula and new ingredients?',
+                    choices=[True, False, repeat_choice],
+                )
+                insert_answer = inquirer.prompt([insert_question])["question"]
+            
+            if insert_answer==repeat_choice:
+                # TODO: Check why regex got the result
+                # TODO: Insert option to correct data (ask which ingredient and then if new quantity or name)
+                pass
+            elif not INSERT_PROMPT or insert_answer:
+                insert_new_ingredient_synonyms(new_ingredient_synonyms, formula_file, db_client)
+                insert_new_formula(translated_formula, relative_formula_path, formula_file, raw_file_extract, db_ingredient_ids, db_client)
+                db_ingredient_synonyms = {
+                    **db_ingredient_synonyms,
+                    **new_ingredient_synonyms,
+                }
         
         
 
