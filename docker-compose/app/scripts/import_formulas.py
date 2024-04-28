@@ -28,10 +28,9 @@ FORMULAS_PATH = f"{BASE_FORMULAS_PATH}Perfume Archive/Vibe Formulas/"
 
 nltk.download('stopwords')
 
+
 # https://spotintelligence.com/2022/12/19/text-similarity-python/
 # https://www.nltk.org/api/nltk.metrics.distance.html
-
-
 def compute_similarity(text1, text2):
     # similarity = jaro_similarity(text1, text2)
     similarity = jaro_winkler_similarity(text1, text2, p=0.04)
