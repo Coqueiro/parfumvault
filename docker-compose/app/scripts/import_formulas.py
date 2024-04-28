@@ -329,7 +329,7 @@ Total quantity: {round(sum(translated_formula.values()),2)}\n
                 if insert_answer==inspect_choices[0]:
                     print(f"{raw_file_extract}\n{json.dumps(formula)}\n")
                 elif insert_answer==inspect_choices[1]:
-                    # TODO: Check why regex got the result 0.1 for linalool in XERYUS ROUGE HOMME - IMF237.pdf
+                    # TODO: Check why regex got the result 0.1 for Linalyl Acetate in XERYUS ROUGE HOMME - IMF237.pdf
                     change_choices = ['Formula', 'Synonyms']
                     change_question = inquirer.List(
                         "question",
