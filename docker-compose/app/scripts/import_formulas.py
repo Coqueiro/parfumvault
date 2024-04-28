@@ -17,8 +17,8 @@ from nltk.tokenize import word_tokenize
 from constants import DB_CREDENTIALS_FILE, APP_PATH
 
 
-# FORMULAS_PATH = f"{APP_PATH}/formulas/"
-FORMULAS_PATH = f"{APP_PATH}/formulas/Perfume Archive/Vibe Formulas/"
+BASE_FORMULAS_PATH = f"{APP_PATH}/formulas/"
+FORMULAS_PATH = f"{BASE_FORMULAS_PATH}Perfume Archive/Vibe Formulas/"
 # FORMULA_FILES = [
 #     # f"{FORMULAS_PATH}Perfume Archive/Vibe Formulas/1881 MEN - IMF022.pdf",
 #     f"{FORMULAS_PATH}Perfume Archive/Vibe Formulas/XERYUS ROUGE HOMME - IMF237.pdf",
@@ -257,7 +257,7 @@ def insert_new_ingredient_synonyms(new_ingredient_synonyms, formula_name, db_cli
 def insert_new_formula(translated_formula, formula_path, relative_formula_path, formula_file,
                        raw_file_extract, db_ingredient_ids, db_client):
     fid = hashlib.sha256(
-        bytes(relative_formula_path, 'utf-8')).hexdigest()[:40]
+        bytes(raw_file_extract, 'utf-8')).hexdigest()[:40]
     formulasMetaData_data = []
     formulasMetaData_data.append({
         'name': formula_file,
@@ -288,7 +288,7 @@ def insert_new_formula(translated_formula, formula_path, relative_formula_path, 
     formulasTags_data.append({
         'formula_id': formula_id,
         # Folder of formula file
-        'tag_name': '/'.join(relative_formula_path.split('/')[:-1]),
+        'tag_name': '/'.join(formula_path.split('/')[:-1]).split(BASE_FORMULAS_PATH)[1],
     })
     formulasTags_data[0]['tag_hash'] = int(str(int(hashlib.sha256(bytes(
         formulasTags_data[0]['tag_name']+str(formulasTags_data[0]['formula_id']), 'utf-8')
