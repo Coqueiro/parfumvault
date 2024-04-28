@@ -6,6 +6,7 @@ import re
 import inquirer
 import nltk
 import PyPDF2
+import pyperclip
 from db_client import MariaDBClient
 from nltk.corpus import stopwords
 from nltk.metrics.distance import jaro_winkler_similarity
@@ -273,6 +274,15 @@ def simple_dict_table(dictionary):
     return table
 
 
+def correct_dictionary(dictionary):
+    pyperclip.copy(json.dumps(dictionary))
+    new_dictionary_prompt = inquirer.Editor(
+        'long_text', message="Current dictionary copied to clipboard. Please edit it and paste it back"
+    )
+    new_dictionary = inquirer.prompt([new_dictionary_prompt])['long_text']
+    return json.loads(new_dictionary)
+
+
 if __name__ == "__main__":
     INSERT_PROMPT = True
     
@@ -281,47 +291,64 @@ if __name__ == "__main__":
     db_ingredient_synonyms = get_db_ingredient_synonyms(db_client)
     db_ingredient_ids = get_db_ingredient_ids(db_client)
     
-    for formula_path in FORMULA_FILES:
+    start_index = int(input(f"Start from which index [0]: ") or 0)
+    for index, formula_path in enumerate(FORMULA_FILES[start_index:]):
+        relative_formula_path = formula_path.replace(FORMULAS_PATH, '')
+        formula_file = relative_formula_path.split('/')[-1].replace('.pdf', '')
+        header_text = f"""[index {start_index+index}]
+{formula_file}
+"""
+        print('\n', header_text)
+        
         formula, raw_file_extract = extract_structure_perfume_formula(formula_path)
 
         translated_formula, new_ingredient_synonyms = translate_formula(
             formula, db_ingredient_synonyms, raw_file_extract)
 
-        relative_formula_path = formula_path.replace(FORMULAS_PATH, '')
-        formula_file = relative_formula_path.split('/')[-1].replace('.pdf', '')
 
-        validation_text = f"""{formula_file}
-        
-{simple_dict_table(translated_formula)}
+
+        tables_text = f"""{simple_dict_table(translated_formula)}
 Total quantity: {round(sum(translated_formula.values()),2)}\n
 {simple_dict_table(new_ingredient_synonyms)}"""
 
-        pydoc.pager(validation_text)
-        print(validation_text)
+        pydoc.pager(f"{header_text}\n{tables_text}")
+        print(tables_text)
         
         insert_answer = False
         if INSERT_PROMPT:
-            repeat_choice = "Read extract"
-            insert_answer = repeat_choice
-            while insert_answer == repeat_choice:
+            inspect_choices = ["Read extract", "Alter data"]
+            insert_answer = inspect_choices[0]
+            while insert_answer in inspect_choices:
                 insert_question = inquirer.List(
                     "question",
-                    message=f'Insert formula and new ingredients?',
-                    choices=[True, False, repeat_choice],
+                    message='Insert formula and new ingredients?',
+                    choices=["Yes", "No"] + inspect_choices,
                 )
                 insert_answer = inquirer.prompt([insert_question])["question"]
             
-            if insert_answer==repeat_choice:
-                # TODO: Check why regex got the result
-                # TODO: Insert option to correct data (ask which ingredient and then if new quantity or name)
-                pass
-            elif not INSERT_PROMPT or insert_answer:
-                insert_new_ingredient_synonyms(new_ingredient_synonyms, formula_file, db_client)
-                insert_new_formula(translated_formula, relative_formula_path, formula_file, raw_file_extract, db_ingredient_ids, db_client)
-                db_ingredient_synonyms = {
-                    **db_ingredient_synonyms,
-                    **new_ingredient_synonyms,
-                }
+                if insert_answer==inspect_choices[0]:
+                    print(f"{raw_file_extract}\n{json.dumps(formula)}\n")
+                elif insert_answer==inspect_choices[1]:
+                    # TODO: Check why regex got the result 0.1 for linalool in XERYUS ROUGE HOMME - IMF237.pdf
+                    change_choices = ['Formula', 'Synonyms']
+                    change_question = inquirer.List(
+                        "question",
+                        message='Change formula or new synonyms?',
+                        choices=change_choices,
+                    )
+                    change_answer = inquirer.prompt([change_question])["question"]
+                    if change_answer == change_choices[0]:
+                        translated_formula = correct_dictionary(translated_formula)
+                    elif change_answer == change_choices[1]:
+                        new_ingredient_synonyms = correct_dictionary(new_ingredient_synonyms)
+                    pass
+                elif not INSERT_PROMPT or insert_answer=="Yes":
+                    insert_new_ingredient_synonyms(new_ingredient_synonyms, formula_file, db_client)
+                    insert_new_formula(translated_formula, relative_formula_path, formula_file, raw_file_extract, db_ingredient_ids, db_client)
+                    db_ingredient_synonyms = {
+                        **db_ingredient_synonyms,
+                        **new_ingredient_synonyms,
+                    }
         
         
 
