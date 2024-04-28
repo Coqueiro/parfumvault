@@ -17,7 +17,13 @@ from nltk.tokenize import word_tokenize
 from constants import DB_CREDENTIALS_FILE, APP_PATH
 
 
-FORMULAS_PATH = f"{APP_PATH}/formulas/"
+# FORMULAS_PATH = f"{APP_PATH}/formulas/"
+FORMULAS_PATH = f"{APP_PATH}/formulas/Perfume Archive/Vibe Formulas/"
+# FORMULA_FILES = [
+#     # f"{FORMULAS_PATH}Perfume Archive/Vibe Formulas/1881 MEN - IMF022.pdf",
+#     f"{FORMULAS_PATH}Perfume Archive/Vibe Formulas/XERYUS ROUGE HOMME - IMF237.pdf",
+#     f"{FORMULAS_PATH}Perfume Archive/Vibe Formulas/XS PACO RAB. 1994 - IMF238.pdf",
+# ]
 
 
 nltk.download('stopwords')
@@ -139,7 +145,7 @@ def create_pdf_dictionary(root_dir):
         and values are lists of full file paths within those subpaths.
     """
 
-    file_dict = {}
+    files_dict = {}
     for subdir, dirs, files in os.walk(root_dir):
         if files:  # Check if the subdirectory contains any files
             file_paths = []
@@ -150,9 +156,10 @@ def create_pdf_dictionary(root_dir):
                     file_paths.append(os.path.join(subdir, file))
                     relative_subdir = os.path.relpath(
                         subdir, root_dir)  # Subpath relative to root
-                    file_dict[relative_subdir] = file_paths
-
-    return file_dict
+                    files_dict[relative_subdir] = file_paths
+    for files in files_dict.values():
+        files.sort()
+    return files_dict
 
 
 def extract_perfume_formula(pdf_path):
@@ -336,7 +343,7 @@ if __name__ == "__main__":
     db_ingredient_synonyms = get_db_ingredient_synonyms(db_client)
     db_ingredient_ids = get_db_ingredient_ids(db_client)
 
-    formula_files = [item for sub_list in create_pdf_dictionary(FORMULAS_PATH) for item in sub_list]
+    formula_files = [item for sub_list in create_pdf_dictionary(FORMULAS_PATH).values() for item in sub_list]
     start_index = int(input(f"Start from which index [0]: ") or 0)
     
     for index, formula_path in enumerate(formula_files[start_index:]):
