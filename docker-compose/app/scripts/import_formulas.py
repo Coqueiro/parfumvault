@@ -21,8 +21,8 @@ BASE_FORMULAS_PATH = f"{APP_PATH}/formulas/"
 FORMULAS_PATH = f"{BASE_FORMULAS_PATH}Perfume Archive/Vibe Formulas/"
 # FORMULA_FILES = [
 #     # f"{FORMULAS_PATH}Perfume Archive/Vibe Formulas/1881 MEN - IMF022.pdf",
-#     f"{FORMULAS_PATH}Perfume Archive/Vibe Formulas/XERYUS ROUGE HOMME - IMF237.pdf",
-#     f"{FORMULAS_PATH}Perfume Archive/Vibe Formulas/XS PACO RAB. 1994 - IMF238.pdf",
+#     f"{FORMULAS_PATH}XERYUS ROUGE HOMME - IMF237.pdf",
+#     f"{FORMULAS_PATH}XS PACO RAB. 1994 - IMF238.pdf",
 # ]
 
 
