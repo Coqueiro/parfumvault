@@ -33,12 +33,12 @@ nltk.download('stopwords')
 # https://www.nltk.org/api/nltk.metrics.distance.html
 def compute_similarity(text1, text2):
     # similarity = jaro_similarity(text1, text2)
+    # 0.000001: 9/10
+    # 0.01: 9/10
+    # 0.1: 14/17
     similarity = jaro_winkler_similarity(text1, text2, p=0.04)
     return similarity
 
-# 0.000001: 9/10
-# 0.01: 9/10
-# 0.1: 14/17
 
 
 def text_similarity(text1, text2):
