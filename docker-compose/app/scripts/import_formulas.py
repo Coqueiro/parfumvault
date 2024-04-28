@@ -314,7 +314,7 @@ if __name__ == "__main__":
         relative_formula_path = formula_path.replace(FORMULAS_PATH, '')
         formula_file = relative_formula_path.split('/')[-1].replace('.pdf', '')
         header_text = f"""[index {start_index+index}]
-{formula_file}
+{relative_formula_path.split('/')[-1]}
 """
         print('\n', header_text)
         
