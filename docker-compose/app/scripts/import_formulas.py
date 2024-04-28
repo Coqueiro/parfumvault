@@ -226,14 +226,18 @@ def translate_formula(formula, db_ingredient_synonyms, raw_file_extract):
         closest_db_ingredient = db_ingredient_synonyms[closest_string]
         if max_similarity == 1:
             if closest_db_ingredient in translated_formula.keys():
-                raise Exception("Trying to insert the same ingredient again")
-            translated_formula[closest_db_ingredient] = formula_ingredient['quantity']
+                print("Trying to insert the same ingredient again, summing values for now")
+                print(f"closest_string [{closest_string}], closest_db_ingredient [{closest_db_ingredient}]")
+                print(f"Previous value [{translated_formula[closest_db_ingredient]}], Added value [{formula_ingredient['quantity']}]")
+            translated_formula[closest_db_ingredient] = translated_formula.get(closest_db_ingredient, 0) + formula_ingredient['quantity']
         else:
             ingredient_answer = ingredient_match_inquiry(
                 formula_ingredient['name'], closest_db_ingredient, max_similarity, raw_file_extract)
             if ingredient_answer in translated_formula.keys():
-                raise Exception("Trying to insert the same ingredient again")
-            translated_formula[ingredient_answer] = formula_ingredient['quantity']
+                print("Trying to insert the same ingredient again, summing values for now")
+                print(f"closest_string [{closest_string}], ingredient_answer [{ingredient_answer}]")
+                print(f"Previous value [{translated_formula[ingredient_answer]}], Added value [{formula_ingredient['quantity']}]")
+            translated_formula[ingredient_answer] = translated_formula.get(ingredient_answer, 0) + formula_ingredient['quantity']
             new_ingredient_synonyms[formula_ingredient['name']
                                     ] = ingredient_answer
 
@@ -346,7 +350,6 @@ if __name__ == "__main__":
     start_index = int(input(f"Start from which index [0]: ") or 0)
     
     for index, formula_path in enumerate(formula_files[start_index:]):
-        # TODO: Remove usage of this to avoid creating ids on top of relative paths which we want to change depending on formulas_path
         relative_formula_path = formula_path.replace(FORMULAS_PATH, '')
         formula_file = relative_formula_path.split('/')[-1].replace('.pdf', '')
         header_text = f"""[index {start_index+index}]
@@ -382,7 +385,6 @@ Total quantity: {round(sum(translated_formula.values()),2)}\n
                 if insert_answer == inspect_choices[0]:
                     print(f"{raw_file_extract}\n{json.dumps(formula)}\n")
                 elif insert_answer == inspect_choices[1]:
-                    # TODO: Check why regex got the result 0.1 for Linalyl Acetate in XERYUS ROUGE HOMME - IMF237.pdf
                     change_choices = ['Formula', 'Synonyms']
                     change_question = inquirer.List(
                         "question",
