@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import json
+import os
 import pydoc
 import re
 
@@ -17,11 +18,6 @@ from constants import DB_CREDENTIALS_FILE, APP_PATH
 
 
 FORMULAS_PATH = f"{APP_PATH}/formulas/"
-FORMULA_FILES = [
-    # f"{FORMULAS_PATH}Perfume Archive/Vibe Formulas/1881 MEN - IMF022.pdf",
-    f"{FORMULAS_PATH}Perfume Archive/Vibe Formulas/XERYUS ROUGE HOMME - IMF237.pdf",
-    f"{FORMULAS_PATH}Perfume Archive/Vibe Formulas/XS PACO RAB. 1994 - IMF238.pdf",
-]
 
 
 nltk.download('stopwords')
@@ -104,24 +100,24 @@ def clean_ingredient_name(ingredient_name):
 def get_db_ingredient_synonyms(db_client):
     synonyms_rows = db_client.execute(
         'SELECT ing as name, synonym FROM pvault.synonyms')
-    
+
     db_ingredient_synonyms = {}
-    
+
     for synonyms_row in synonyms_rows:
         db_ingredient_synonyms[synonyms_row['synonym']] = synonyms_row['name']
-        
+
     return db_ingredient_synonyms
 
 
 def get_db_ingredient_ids(db_client):
     ingredients_rows = db_client.execute(
         'SELECT id, name FROM pvault.ingredients')
-    
+
     db_ingredient_ids = {}
-    
+
     for ingredients_row in ingredients_rows:
         db_ingredient_ids[ingredients_row['name']] = ingredients_row['id']
-        
+
     return db_ingredient_ids
 
 
@@ -130,6 +126,33 @@ def match_ingredients(target_string, db_ingredients):
         target_string, db_ingredients)
 
     return closest_string, max_similarity
+
+
+def create_pdf_dictionary(root_dir):
+    """Creates a dictionary of file paths organized by subpaths.
+
+    Args:
+        root_dir: The root directory to start searching from.
+
+    Returns:
+        A dictionary where keys are subpaths relative to the root directory, 
+        and values are lists of full file paths within those subpaths.
+    """
+
+    file_dict = {}
+    for subdir, dirs, files in os.walk(root_dir):
+        if files:  # Check if the subdirectory contains any files
+            file_paths = []
+            for file in files:
+                if file.split('.')[-1] != 'pdf':
+                    print(f"Skipped {os.path.join(subdir, file)}")
+                else:
+                    file_paths.append(os.path.join(subdir, file))
+                    relative_subdir = os.path.relpath(
+                        subdir, root_dir)  # Subpath relative to root
+                    file_dict[relative_subdir] = file_paths
+
+    return file_dict
 
 
 def extract_perfume_formula(pdf_path):
@@ -148,7 +171,8 @@ def extract_perfume_formula(pdf_path):
 
 
 def extract_structure_perfume_formula(pdf_path):
-    formula_ingredients_result, raw_file_extract = extract_perfume_formula(pdf_path)
+    formula_ingredients_result, raw_file_extract = extract_perfume_formula(
+        pdf_path)
     formula_ingredients = []
     for formula_ingredient_result in formula_ingredients_result:
         name, quantity = formula_ingredient_result
@@ -204,8 +228,8 @@ def translate_formula(formula, db_ingredient_synonyms, raw_file_extract):
             if ingredient_answer in translated_formula.keys():
                 raise Exception("Trying to insert the same ingredient again")
             translated_formula[ingredient_answer] = formula_ingredient['quantity']
-            new_ingredient_synonyms[formula_ingredient['name']] = ingredient_answer
-            
+            new_ingredient_synonyms[formula_ingredient['name']
+                                    ] = ingredient_answer
 
     return translated_formula, new_ingredient_synonyms
 
@@ -219,21 +243,22 @@ def insert_new_ingredient_synonyms(new_ingredient_synonyms, formula_name, db_cli
                 'ing': ing,
                 'source': f"Formula: {formula_name}",
             })
-        
+
         db_client.upsert(table_name="synonyms", data=synonyms_dict)
 
 
-def insert_new_formula(translated_formula, formula_path, relative_formula_path, formula_file, 
+def insert_new_formula(translated_formula, formula_path, relative_formula_path, formula_file,
                        raw_file_extract, db_ingredient_ids, db_client):
-    fid = hashlib.sha256(bytes(relative_formula_path, 'utf-8')).hexdigest()[:40]
+    fid = hashlib.sha256(
+        bytes(relative_formula_path, 'utf-8')).hexdigest()[:40]
     formulasMetaData_data = []
     formulasMetaData_data.append({
         'name': formula_file,
         'fid': fid,
         'sex': '',
-        'notes': raw_file_extract, # Raw text extracted from PDF
-        'catClass': 'cat4', # Fine fragrance category
-        'status': 2, # Under evaluation
+        'notes': raw_file_extract,  # Raw text extracted from PDF
+        'catClass': 'cat4',  # Fine fragrance category
+        'status': 2,  # Under evaluation
     })
     db_client.upsert(table_name="formulasMetaData", data=formulasMetaData_data)
     formula_id_result = formula_id = db_client.execute(
@@ -255,17 +280,19 @@ def insert_new_formula(translated_formula, formula_path, relative_formula_path, 
     formulasTags_data = []
     formulasTags_data.append({
         'formula_id': formula_id,
-        'tag_name': '/'.join(relative_formula_path.split('/')[:-1]), # Folder of formula file
+        # Folder of formula file
+        'tag_name': '/'.join(relative_formula_path.split('/')[:-1]),
     })
     formulasTags_data[0]['tag_hash'] = int(str(int(hashlib.sha256(bytes(
         formulasTags_data[0]['tag_name']+str(formulasTags_data[0]['formula_id']), 'utf-8')
     ).hexdigest(), 16))[:9])
     db_client.upsert(table_name="formulasTags", data=formulasTags_data)
-    
+
     formulas_data = []
     formula_history_data = []
     for formula_ingredient, quantity in translated_formula.items():
-        fid_ingredient_hash = int(str(int(hashlib.sha256(bytes(fid+formula_ingredient, 'utf-8')).hexdigest(), 16))[:9])
+        fid_ingredient_hash = int(str(int(hashlib.sha256(
+            bytes(fid+formula_ingredient, 'utf-8')).hexdigest(), 16))[:9])
         formulas_data.append({
             'fid': fid,
             'name': formula_file,
@@ -303,27 +330,28 @@ def correct_dictionary(dictionary):
 
 if __name__ == "__main__":
     INSERT_PROMPT = True
-    
+
     with open(DB_CREDENTIALS_FILE) as f:
         db_client = MariaDBClient(**json.load(f))
     db_ingredient_synonyms = get_db_ingredient_synonyms(db_client)
     db_ingredient_ids = get_db_ingredient_ids(db_client)
-    
+
+    formula_files = [item for sub_list in create_pdf_dictionary(FORMULAS_PATH) for item in sub_list]
     start_index = int(input(f"Start from which index [0]: ") or 0)
-    for index, formula_path in enumerate(FORMULA_FILES[start_index:]):
+    
+    for index, formula_path in enumerate(formula_files[start_index:]):
         relative_formula_path = formula_path.replace(FORMULAS_PATH, '')
         formula_file = relative_formula_path.split('/')[-1].replace('.pdf', '')
         header_text = f"""[index {start_index+index}]
 {relative_formula_path.split('/')[-1]}
 """
         print('\n', header_text)
-        
-        formula, raw_file_extract = extract_structure_perfume_formula(formula_path)
+
+        formula, raw_file_extract = extract_structure_perfume_formula(
+            formula_path)
 
         translated_formula, new_ingredient_synonyms = translate_formula(
             formula, db_ingredient_synonyms, raw_file_extract)
-
-
 
         tables_text = f"""{simple_dict_table(translated_formula)}
 Total quantity: {round(sum(translated_formula.values()),2)}\n
@@ -331,7 +359,7 @@ Total quantity: {round(sum(translated_formula.values()),2)}\n
 
         pydoc.pager(f"{header_text}\n{tables_text}")
         print(tables_text)
-        
+
         insert_answer = False
         if INSERT_PROMPT:
             inspect_choices = ["Read extract", "Alter data"]
@@ -343,10 +371,10 @@ Total quantity: {round(sum(translated_formula.values()),2)}\n
                     choices=["Yes", "No"] + inspect_choices,
                 )
                 insert_answer = inquirer.prompt([insert_question])["question"]
-            
-                if insert_answer==inspect_choices[0]:
+
+                if insert_answer == inspect_choices[0]:
                     print(f"{raw_file_extract}\n{json.dumps(formula)}\n")
-                elif insert_answer==inspect_choices[1]:
+                elif insert_answer == inspect_choices[1]:
                     # TODO: Check why regex got the result 0.1 for Linalyl Acetate in XERYUS ROUGE HOMME - IMF237.pdf
                     change_choices = ['Formula', 'Synonyms']
                     change_question = inquirer.List(
@@ -354,22 +382,25 @@ Total quantity: {round(sum(translated_formula.values()),2)}\n
                         message='Change formula or new synonyms?',
                         choices=change_choices,
                     )
-                    change_answer = inquirer.prompt([change_question])["question"]
+                    change_answer = inquirer.prompt(
+                        [change_question])["question"]
                     if change_answer == change_choices[0]:
-                        translated_formula = correct_dictionary(translated_formula)
+                        translated_formula = correct_dictionary(
+                            translated_formula)
                     elif change_answer == change_choices[1]:
-                        new_ingredient_synonyms = correct_dictionary(new_ingredient_synonyms)
+                        new_ingredient_synonyms = correct_dictionary(
+                            new_ingredient_synonyms)
                     pass
-                elif not INSERT_PROMPT or insert_answer=="Yes":
-                    insert_new_ingredient_synonyms(new_ingredient_synonyms, formula_file, db_client)
-                    insert_new_formula(translated_formula, formula_path, relative_formula_path, 
+                elif not INSERT_PROMPT or insert_answer == "Yes":
+                    insert_new_ingredient_synonyms(
+                        new_ingredient_synonyms, formula_file, db_client)
+                    insert_new_formula(translated_formula, formula_path, relative_formula_path,
                                        formula_file, raw_file_extract, db_ingredient_ids, db_client)
                     db_ingredient_synonyms = {
                         **db_ingredient_synonyms,
                         **new_ingredient_synonyms,
                     }
-        
-        
+
 
 # Create readers for different kinds of pdfs depending on pdf properties, including path
 
