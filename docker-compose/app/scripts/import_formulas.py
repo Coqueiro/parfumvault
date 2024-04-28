@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import json
 import pydoc
@@ -13,6 +14,7 @@ from nltk.metrics.distance import jaro_winkler_similarity
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 from constants import DB_CREDENTIALS_FILE, APP_PATH
+
 
 FORMULAS_PATH = f"{APP_PATH}/formulas/"
 FORMULA_FILES = [
@@ -193,10 +195,14 @@ def translate_formula(formula, db_ingredient_synonyms, raw_file_extract):
             formula_ingredient['name'], ingredient_synonyms)
         closest_db_ingredient = db_ingredient_synonyms[closest_string]
         if max_similarity == 1:
+            if closest_db_ingredient in translated_formula.keys():
+                raise Exception("Trying to insert the same ingredient again")
             translated_formula[closest_db_ingredient] = formula_ingredient['quantity']
         else:
             ingredient_answer = ingredient_match_inquiry(
                 formula_ingredient['name'], closest_db_ingredient, max_similarity, raw_file_extract)
+            if ingredient_answer in translated_formula.keys():
+                raise Exception("Trying to insert the same ingredient again")
             translated_formula[ingredient_answer] = formula_ingredient['quantity']
             new_ingredient_synonyms[formula_ingredient['name']] = ingredient_answer
             
@@ -217,7 +223,8 @@ def insert_new_ingredient_synonyms(new_ingredient_synonyms, formula_name, db_cli
         db_client.upsert(table_name="synonyms", data=synonyms_dict)
 
 
-def insert_new_formula(translated_formula, relative_formula_path, formula_file, raw_file_extract, db_ingredient_ids, db_client):
+def insert_new_formula(translated_formula, formula_path, relative_formula_path, formula_file, 
+                       raw_file_extract, db_ingredient_ids, db_client):
     fid = hashlib.sha256(bytes(relative_formula_path, 'utf-8')).hexdigest()[:40]
     formulasMetaData_data = []
     formulasMetaData_data.append({
@@ -233,6 +240,17 @@ def insert_new_formula(translated_formula, relative_formula_path, formula_file, 
         f"SELECT id FROM pvault.formulasMetaData WHERE fid = '{fid}'"
     )
     formula_id = formula_id_result[0]['id']
+
+    file_extension = relative_formula_path.split('.')[-1]
+    with open(formula_path, 'rb') as f:
+        documents_data = [{
+            'ownerID': formula_id,
+            'type': 5,
+            'name': relative_formula_path.split('/')[-1],
+            'docData': f"data:application/{file_extension};base64,{base64.b64encode(f.read()).decode('utf-8')}",
+            'notes': 'Import script',
+        }]
+        db_client.upsert(table_name="documents", data=documents_data)
 
     formulasTags_data = []
     formulasTags_data.append({
@@ -344,7 +362,8 @@ Total quantity: {round(sum(translated_formula.values()),2)}\n
                     pass
                 elif not INSERT_PROMPT or insert_answer=="Yes":
                     insert_new_ingredient_synonyms(new_ingredient_synonyms, formula_file, db_client)
-                    insert_new_formula(translated_formula, relative_formula_path, formula_file, raw_file_extract, db_ingredient_ids, db_client)
+                    insert_new_formula(translated_formula, formula_path, relative_formula_path, 
+                                       formula_file, raw_file_extract, db_ingredient_ids, db_client)
                     db_ingredient_synonyms = {
                         **db_ingredient_synonyms,
                         **new_ingredient_synonyms,
