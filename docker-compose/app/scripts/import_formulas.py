@@ -179,7 +179,7 @@ def ingredient_match_inquiry(formula_ingredient, db_ingredient, similarity, raw_
         else:
             return proposed_ingredient_name
     elif choice == choices[2]:
-        pydoc.pager(f"{raw_file_extract}\n{formula}")
+        pydoc.pager(f"{raw_file_extract}\n{json.dumps(formula)}")
         return ingredient_match_inquiry(formula_ingredient, db_ingredient, similarity, raw_file_extract)
 
 
