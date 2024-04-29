@@ -4,6 +4,7 @@ import json
 import os
 import pydoc
 import re
+from textwrap import dedent
 
 import inquirer
 import nltk
@@ -352,9 +353,10 @@ if __name__ == "__main__":
     for index, formula_path in enumerate(formula_files[start_index:]):
         relative_formula_path = formula_path.replace(FORMULAS_PATH, '')
         formula_file = relative_formula_path.split('/')[-1].replace('.pdf', '')
-        header_text = f"""[index {start_index+index}]
-{relative_formula_path.split('/')[-1]}
-"""
+        header_text = dedent(f"""\
+            [index {start_index+index}]
+            {relative_formula_path.split('/')[-1]}
+        """)
         print('\n', header_text)
 
         formula, raw_file_extract = extract_structure_perfume_formula(
@@ -363,9 +365,10 @@ if __name__ == "__main__":
         translated_formula, new_ingredient_synonyms = translate_formula(
             formula, db_ingredient_synonyms, raw_file_extract)
 
-        tables_text = f"""{simple_dict_table(translated_formula)}
-Total quantity: {round(sum(translated_formula.values()),2)}\n
-{simple_dict_table(new_ingredient_synonyms)}"""
+        tables_text = dedent(f"""\
+            {simple_dict_table(translated_formula)}
+            Total quantity: {round(sum(translated_formula.values()),2)}\n
+            {simple_dict_table(new_ingredient_synonyms)}""")
 
         pydoc.pager(f"{header_text}\n{tables_text}")
         print(tables_text)
