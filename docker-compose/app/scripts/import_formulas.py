@@ -79,7 +79,7 @@ def filter_text(text, pattern):
     return result
 
 
-def preprocess(text, source='Perfume Archive/Vibe Formulas'):
+def preprocess(text, source):
     filtered_text = text
 
     if source == 'Perfume Archive/Vibe Formulas':
@@ -87,6 +87,7 @@ def preprocess(text, source='Perfume Archive/Vibe Formulas'):
         filtered_text = filter_text(filtered_text, r"PerfumerArchive\.com")
         filtered_text = filter_text(filtered_text, r"^\W+")
     else:
+        print(f"\nNo `preprocess` implemented for source: {source}\n")
         pass
 
     return filtered_text
@@ -162,14 +163,14 @@ def create_pdf_dictionary(root_dir):
     return files_dict
 
 
-def extract_perfume_formula(pdf_path):
+def extract_perfume_formula(pdf_path, source):
     pdf_reader = PyPDF2.PdfReader(pdf_path)
     raw_file_extract = ""
     for page_num in range(len(pdf_reader.pages)):
         page = pdf_reader.pages[page_num]
         raw_file_extract += '\n' + page.extract_text()
 
-    preprocess_text = preprocess(raw_file_extract)
+    preprocess_text = preprocess(raw_file_extract, source)
 
     pattern = r"([\w0-9 ()-.%/,]+)[ ]+([0-9.]+)$"
     ingredients_text = re.findall(pattern, preprocess_text, flags=re.MULTILINE)
@@ -177,9 +178,8 @@ def extract_perfume_formula(pdf_path):
     return ingredients_text, raw_file_extract
 
 
-def extract_structure_perfume_formula(pdf_path):
-    formula_ingredients_result, raw_file_extract = extract_perfume_formula(
-        pdf_path)
+def extract_structure_perfume_formula(pdf_path, source):
+    formula_ingredients_result, raw_file_extract = extract_perfume_formula(pdf_path, source)
     formula_ingredients = []
     for formula_ingredient_result in formula_ingredients_result:
         name, quantity = formula_ingredient_result
@@ -206,6 +206,7 @@ def ingredient_match_inquiry(formula_ingredient, db_ingredient, similarity, raw_
         proposed_ingredient_name = clean_ingredient_name(
             formula_ingredient).title()
         text_input = inquirer.prompt([inquirer.Text('text', message=f"Enter db ingredient name [{proposed_ingredient_name}]")])['text']
+        print()
         if len(text_input) > 0:
             return text_input
         else:
@@ -227,16 +228,16 @@ def translate_formula(formula, db_ingredient_synonyms, raw_file_extract):
         if max_similarity == 1:
             if closest_db_ingredient in translated_formula.keys():
                 print("Trying to insert the same ingredient again, summing values for now")
-                print(f"closest_string [{closest_string}], closest_db_ingredient [{closest_db_ingredient}]")
-                print(f"Previous value [{translated_formula[closest_db_ingredient]}], Added value [{formula_ingredient['quantity']}]")
+                print(f"closest_db_ingredient [{closest_db_ingredient}], closest_string [{closest_string}]")
+                print(f"Previous value [{translated_formula[closest_db_ingredient]}], Added value [{formula_ingredient['quantity']}]\n")
             translated_formula[closest_db_ingredient] = translated_formula.get(closest_db_ingredient, 0) + formula_ingredient['quantity']
         else:
             ingredient_answer = ingredient_match_inquiry(
                 formula_ingredient['name'], closest_db_ingredient, max_similarity, raw_file_extract)
             if ingredient_answer in translated_formula.keys():
                 print("Trying to insert the same ingredient again, summing values for now")
-                print(f"closest_string [{closest_string}], ingredient_answer [{ingredient_answer}]")
-                print(f"Previous value [{translated_formula[ingredient_answer]}], Added value [{formula_ingredient['quantity']}]")
+                print(f"ingredient_answer [{ingredient_answer}], closest_string [{closest_string}]")
+                print(f"Previous value [{translated_formula[ingredient_answer]}], Added value [{formula_ingredient['quantity']}]\n")
             translated_formula[ingredient_answer] = translated_formula.get(ingredient_answer, 0) + formula_ingredient['quantity']
             new_ingredient_synonyms[formula_ingredient['name']
                                     ] = ingredient_answer
@@ -258,7 +259,7 @@ def insert_new_ingredient_synonyms(new_ingredient_synonyms, formula_name, db_cli
 
 
 def insert_new_formula(translated_formula, formula_path, relative_formula_path, formula_file,
-                       raw_file_extract, db_ingredient_ids, db_client):
+                       raw_file_extract, db_ingredient_ids, db_client, source):
     fid = hashlib.sha256(
         bytes(raw_file_extract, 'utf-8')).hexdigest()[:40]
     formulasMetaData_data = []
@@ -291,7 +292,7 @@ def insert_new_formula(translated_formula, formula_path, relative_formula_path, 
     formulasTags_data.append({
         'formula_id': formula_id,
         # Folder of formula file
-        'tag_name': '/'.join(formula_path.split('/')[:-1]).split(BASE_FORMULAS_PATH)[1],
+        'tag_name': source,
     })
     formulasTags_data[0]['tag_hash'] = int(str(int(hashlib.sha256(bytes(
         formulasTags_data[0]['tag_name']+str(formulasTags_data[0]['formula_id']), 'utf-8')
@@ -322,11 +323,12 @@ def insert_new_formula(translated_formula, formula_path, relative_formula_path, 
 
 
 def simple_dict_table(dictionary):
-    table = ''
+    table = []
+    indent_to_add = '            '
     first_column_size = max([0]+[len(value) for value in dictionary.keys()])
     for key, value in dictionary.items():
-        table += f"   {(key + ' '*first_column_size)[:first_column_size]} | {value}\n"
-    return table
+        table.append(f"{(key + ' '*first_column_size)[:first_column_size]} | {value}\n")
+    return indent_to_add.join(table)
 
 
 def correct_dictionary(dictionary):
@@ -359,8 +361,8 @@ if __name__ == "__main__":
         """)
         print('\n', header_text)
 
-        formula, raw_file_extract = extract_structure_perfume_formula(
-            formula_path)
+        source = '/'.join(formula_path.split('/')[:-1]).split(BASE_FORMULAS_PATH)[1]
+        formula, raw_file_extract = extract_structure_perfume_formula(formula_path, source)
 
         translated_formula, new_ingredient_synonyms = translate_formula(
             formula, db_ingredient_synonyms, raw_file_extract)
@@ -380,7 +382,7 @@ if __name__ == "__main__":
             while insert_answer in inspect_choices:
                 insert_question = inquirer.List(
                     "question",
-                    message='Insert formula and new ingredients?',
+                    message=f"Insert formula and new ingredients? [{relative_formula_path.split('/')[-1]}]",
                     choices=["Yes", "No"] + inspect_choices,
                 )
                 insert_answer = inquirer.prompt([insert_question])["question"]
@@ -407,7 +409,7 @@ if __name__ == "__main__":
                     insert_new_ingredient_synonyms(
                         new_ingredient_synonyms, formula_file, db_client)
                     insert_new_formula(translated_formula, formula_path, relative_formula_path,
-                                       formula_file, raw_file_extract, db_ingredient_ids, db_client)
+                                       formula_file, raw_file_extract, db_ingredient_ids, db_client, source)
                     db_ingredient_synonyms = {
                         **db_ingredient_synonyms,
                         **new_ingredient_synonyms,
