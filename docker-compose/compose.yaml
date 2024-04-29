@@ -16,7 +16,7 @@ services:
       - 3306:3306
   pvault:
     # image: globaldyne/perfumersvault:latest
-    image: pvault:latest
+    image: coqueirotree/pvault:latest
     ports:
       - 8001:8000
     restart: always
