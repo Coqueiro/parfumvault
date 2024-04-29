@@ -31,7 +31,7 @@ class MariaDBClient:
         if conn:
             conn.close()
 
-    def upsert(self, table_name, data):
+    def upsert(self, table_name, data, update_statement_override=None):
         """
         Upserts a list of dictionaries into the specified table.
 
@@ -52,12 +52,12 @@ class MariaDBClient:
             values_placeholder = ", ".join([f"({placeholders})" for i in range(len(data))])
             all_values = [val for row in data for val in row.values()]
 
-            update_assignments = ", ".join(
-                [f"{col} = VALUES({col})" for col in data[0].keys()])
+            update_assignments = ", ".join([f"{col} = VALUES({col})" for col in data[0].keys()])
+            update_key_statement = update_statement_override or f"UPDATE {update_assignments}"
             query = f"""
                 INSERT INTO {table_name} ({columns})
                 VALUES {values_placeholder}
-                ON DUPLICATE KEY UPDATE {update_assignments}
+                ON DUPLICATE KEY {update_key_statement}
             """
 
             try:

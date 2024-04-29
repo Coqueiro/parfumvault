@@ -255,7 +255,9 @@ def insert_new_ingredient_synonyms(new_ingredient_synonyms, formula_name, db_cli
                 'source': f"Formula: {formula_name}",
             })
 
-        db_client.upsert(table_name="synonyms", data=synonyms_dict)
+        db_client.upsert(table_name="synonyms", data=synonyms_dict,
+            update_statement_override="UPDATE ing = VALUES(ing), source = CONCAT(source, ', ', VALUES(source))"
+        )
 
 
 def insert_new_formula(translated_formula, formula_path, relative_formula_path, formula_file,
