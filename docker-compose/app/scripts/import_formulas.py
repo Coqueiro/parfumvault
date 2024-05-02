@@ -57,9 +57,6 @@ def text_similarity(text1, text2):
 
 
 def find_closest_match(target_string, list_of_strings):
-    """
-    Finds the string in a list with the smallest Levenshtein distance from a target string.
-    """
     max_similarity = float(0)
     closest_string = None
 
@@ -484,6 +481,8 @@ if __name__ == "__main__":
 
 
 # Create readers for different kinds of pdfs depending on pdf properties, including path
+
+# TODO: dump from scenttree?
 
 # Steps:
 # TODO: 1. Formula extraction
