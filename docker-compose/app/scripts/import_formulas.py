@@ -106,9 +106,9 @@ def get_db_ingredient_synonyms(db_client):
         # Insert any new ingredient synonyms buffer before getting started
         with open(DB_NEW_INGREDIENT_SYNONYMS_BUFFER_FILE, "r") as f:
             db_new_ingredient_synonyms_buffer = json.load(f)
-        db_client.upsert(table_name="synonyms", data=db_new_ingredient_synonyms_buffer,
-                         update_statement_override="UPDATE ing = VALUES(ing), source = CONCAT(source, ', ', VALUES(source))"
-                         )
+            db_client.upsert(table_name="synonyms", data=db_new_ingredient_synonyms_buffer,
+                update_statement_override="UPDATE ing = VALUES(ing), source = CONCAT(source, ', ', VALUES(source))"
+            )
 
         synonyms_rows = db_client.execute(
             'SELECT ing as name, synonym FROM pvault.synonyms')
