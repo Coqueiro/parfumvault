@@ -6,7 +6,7 @@ from spreadsheet_client import GoogleSheetsReader
 from collections import OrderedDict
 
 from helper import transform_entry_in_dict_list, create_dict_list, filter_dict_list_by_keys
-from constants import SPREADSHEET_CREDENTIALS_FILE, DB_CREDENTIALS_FILE, MATERIALS_FILE
+from constants import SPREADSHEET_CREDENTIALS_FILE, DB_CREDENTIALS_FILE, SPREADSHEET_CACHE_FILE
 
 
 def read_spreadsheet_materials(fetch_remote):
@@ -15,10 +15,10 @@ def read_spreadsheet_materials(fetch_remote):
     if fetch_remote:
         sheet_ingredients = reader.read_data(
             "Perfume Personal Worksheet", "Materials", "B3:AB307")
-        with open(MATERIALS_FILE, "w") as f:
+        with open(SPREADSHEET_CACHE_FILE, "w") as f:
             json.dump(sheet_ingredients, f)
     else:
-        with open(MATERIALS_FILE, "r") as f:
+        with open(SPREADSHEET_CACHE_FILE, "r") as f:
             sheet_ingredients = json.load(f)
 
     return sheet_ingredients

@@ -15,7 +15,7 @@ from nltk.corpus import stopwords
 from nltk.metrics.distance import jaro_winkler_similarity
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
-from constants import DB_CREDENTIALS_FILE, APP_PATH
+from constants import DB_CREDENTIALS_FILE, APP_PATH, DB_INGREDIENT_IDS_CACHE_FILE, DB_INGREDIENT_SYNONYMS_CACHE_FILE, DB_NEW_INGREDIENT_SYNONYMS_BUFFER_FILE, IS_ONLINE
 
 
 BASE_FORMULAS_PATH = f"{APP_PATH}/formulas/"
@@ -25,7 +25,6 @@ FORMULAS_PATH = f"{BASE_FORMULAS_PATH}Perfume Archive/Vibe Formulas/"
 #     f"{FORMULAS_PATH}XERYUS ROUGE HOMME - IMF237.pdf",
 #     f"{FORMULAS_PATH}XS PACO RAB. 1994 - IMF238.pdf",
 # ]
-
 
 nltk.download('stopwords')
 
@@ -39,7 +38,6 @@ def compute_similarity(text1, text2):
     # 0.1: 14/17
     similarity = jaro_winkler_similarity(text1, text2, p=0.04)
     return similarity
-
 
 
 def text_similarity(text1, text2):
@@ -105,27 +103,51 @@ def clean_ingredient_name(ingredient_name):
 
 
 def get_db_ingredient_synonyms(db_client):
-    synonyms_rows = db_client.execute(
-        'SELECT ing as name, synonym FROM pvault.synonyms')
+    if IS_ONLINE:
+        # TODO: Add a if file exists and loads a dictionary with len > 0
+        # TODO: The idea here is to pickup any cache created and insert it to the db asap
+        # Insert any new ingredient synonyms buffer before getting started
+        with open(DB_NEW_INGREDIENT_SYNONYMS_BUFFER_FILE, "r") as f:
+            db_new_ingredient_synonyms_buffer = json.load(f)
+        db_client.upsert(table_name="synonyms", data=db_new_ingredient_synonyms_buffer,
+                         update_statement_override="UPDATE ing = VALUES(ing), source = CONCAT(source, ', ', VALUES(source))"
+                         )
 
-    db_ingredient_synonyms = {}
+        synonyms_rows = db_client.execute(
+            'SELECT ing as name, synonym FROM pvault.synonyms')
 
-    for synonyms_row in synonyms_rows:
-        db_ingredient_synonyms[synonyms_row['synonym']] = synonyms_row['name']
+        db_ingredient_synonyms = {}
 
-    return db_ingredient_synonyms
+        for synonyms_row in synonyms_rows:
+            db_ingredient_synonyms[synonyms_row['synonym']
+                                   ] = synonyms_row['name']
+
+        with open(DB_INGREDIENT_SYNONYMS_CACHE_FILE, "w") as f:
+            json.dump(db_ingredient_synonyms, f)
+
+        return db_ingredient_synonyms
+    else:
+        with open(DB_INGREDIENT_SYNONYMS_CACHE_FILE, "r") as f:
+            return json.load(f)
 
 
 def get_db_ingredient_ids(db_client):
-    ingredients_rows = db_client.execute(
-        'SELECT id, name FROM pvault.ingredients')
+    if IS_ONLINE:
+        ingredients_rows = db_client.execute(
+            'SELECT id, name FROM pvault.ingredients')
 
-    db_ingredient_ids = {}
+        db_ingredient_ids = {}
 
-    for ingredients_row in ingredients_rows:
-        db_ingredient_ids[ingredients_row['name']] = ingredients_row['id']
+        for ingredients_row in ingredients_rows:
+            db_ingredient_ids[ingredients_row['name']] = ingredients_row['id']
 
-    return db_ingredient_ids
+        with open(DB_INGREDIENT_IDS_CACHE_FILE, "w") as f:
+            json.dump(db_ingredient_ids, f)
+
+        return db_ingredient_ids
+    else:
+        with open(DB_INGREDIENT_IDS_CACHE_FILE, "r") as f:
+            return json.load(f)
 
 
 def match_ingredients(target_string, db_ingredients):
@@ -179,7 +201,8 @@ def extract_perfume_formula(pdf_path, source):
 
 
 def extract_structure_perfume_formula(pdf_path, source):
-    formula_ingredients_result, raw_file_extract = extract_perfume_formula(pdf_path, source)
+    formula_ingredients_result, raw_file_extract = extract_perfume_formula(
+        pdf_path, source)
     formula_ingredients = []
     for formula_ingredient_result in formula_ingredients_result:
         name, quantity = formula_ingredient_result
@@ -205,7 +228,8 @@ def ingredient_match_inquiry(formula_ingredient, db_ingredient, similarity, raw_
     elif choice == choices[1]:
         proposed_ingredient_name = clean_ingredient_name(
             formula_ingredient).title()
-        text_input = inquirer.prompt([inquirer.Text('text', message=f"Enter db ingredient name [{proposed_ingredient_name}]")])['text']
+        text_input = inquirer.prompt([inquirer.Text(
+            'text', message=f"Enter db ingredient name [{proposed_ingredient_name}]")])['text']
         print()
         if len(text_input) > 0:
             return text_input
@@ -227,18 +251,26 @@ def translate_formula(formula, db_ingredient_synonyms, raw_file_extract):
         closest_db_ingredient = db_ingredient_synonyms[closest_string]
         if max_similarity == 1:
             if closest_db_ingredient in translated_formula.keys():
-                print("Trying to insert the same ingredient again, summing values for now")
-                print(f"closest_db_ingredient [{closest_db_ingredient}], closest_string [{closest_string}]")
-                print(f"Previous value [{translated_formula[closest_db_ingredient]}], Added value [{formula_ingredient['quantity']}]\n")
-            translated_formula[closest_db_ingredient] = translated_formula.get(closest_db_ingredient, 0) + formula_ingredient['quantity']
+                print(
+                    "Trying to insert the same ingredient again, summing values for now")
+                print(
+                    f"closest_db_ingredient [{closest_db_ingredient}], closest_string [{closest_string}]")
+                print(
+                    f"Previous value [{translated_formula[closest_db_ingredient]}], Added value [{formula_ingredient['quantity']}]\n")
+            translated_formula[closest_db_ingredient] = translated_formula.get(
+                closest_db_ingredient, 0) + formula_ingredient['quantity']
         else:
             ingredient_answer = ingredient_match_inquiry(
                 formula_ingredient['name'], closest_db_ingredient, max_similarity, raw_file_extract)
             if ingredient_answer in translated_formula.keys():
-                print("Trying to insert the same ingredient again, summing values for now")
-                print(f"ingredient_answer [{ingredient_answer}], closest_string [{closest_string}]")
-                print(f"Previous value [{translated_formula[ingredient_answer]}], Added value [{formula_ingredient['quantity']}]\n")
-            translated_formula[ingredient_answer] = translated_formula.get(ingredient_answer, 0) + formula_ingredient['quantity']
+                print(
+                    "Trying to insert the same ingredient again, summing values for now")
+                print(
+                    f"ingredient_answer [{ingredient_answer}], closest_string [{closest_string}]")
+                print(
+                    f"Previous value [{translated_formula[ingredient_answer]}], Added value [{formula_ingredient['quantity']}]\n")
+            translated_formula[ingredient_answer] = translated_formula.get(
+                ingredient_answer, 0) + formula_ingredient['quantity']
             new_ingredient_synonyms[formula_ingredient['name']
                                     ] = ingredient_answer
 
@@ -255,13 +287,23 @@ def insert_new_ingredient_synonyms(new_ingredient_synonyms, formula_name, db_cli
                 'source': f"Formula: {formula_name}",
             })
 
-        db_client.upsert(table_name="synonyms", data=synonyms_dict,
-            update_statement_override="UPDATE ing = VALUES(ing), source = CONCAT(source, ', ', VALUES(source))"
-        )
+        if IS_ONLINE:
+            db_client.upsert(table_name="synonyms", data=synonyms_dict,
+                             update_statement_override="UPDATE ing = VALUES(ing), source = CONCAT(source, ', ', VALUES(source))"
+                             )
+        else:
+            with open(DB_NEW_INGREDIENT_SYNONYMS_BUFFER_FILE, "w") as f:
+                # TODO: Make sure this is adding new entries and not deleting the existing ones
+                # TODO: Maybe by reading the existing file and doing a unique operation here using
+                # TODO: `synonym` as unique key
+                db_new_ingredient_synonyms_buffer = json.load(f)
+                json.dump(db_new_ingredient_synonyms_buffer + synonyms_dict, f)
 
 
 def insert_new_formula(translated_formula, formula_path, relative_formula_path, formula_file,
                        raw_file_extract, db_ingredient_ids, db_client, source):
+    # TODO: Implement IS_ONLINE flow, but it's not high priority because if I implement the
+    # TODO: `synonym` flow actually reading the formula into the db is very easy
     fid = hashlib.sha256(
         bytes(raw_file_extract, 'utf-8')).hexdigest()[:40]
     formulasMetaData_data = []
@@ -329,7 +371,8 @@ def simple_dict_table(dictionary):
     indent_to_add = '            '
     first_column_size = max([0]+[len(value) for value in dictionary.keys()])
     for key, value in dictionary.items():
-        table.append(f"{(key + ' '*first_column_size)[:first_column_size]} | {value}\n")
+        table.append(
+            f"{(key + ' '*first_column_size)[:first_column_size]} | {value}\n")
     return indent_to_add.join(table)
 
 
@@ -343,7 +386,8 @@ def correct_dictionary(dictionary):
 
 
 def get_start_index(formula_files):
-    index_answer = input(f"Type the index or name of the file you want to start with [0]: ")
+    index_answer = input(
+        f"Type the index or name of the file you want to start with [0]: ")
     try:
         return int(index_answer or 0)
     except:
@@ -352,18 +396,22 @@ def get_start_index(formula_files):
                 return index
     raise Exception("No numeric index or existing file string given")
 
-if __name__ == "__main__":
-    INSERT_PROMPT = True
 
-    with open(DB_CREDENTIALS_FILE) as f:
-        db_client = MariaDBClient(**json.load(f))
+if __name__ == "__main__":
+    if IS_ONLINE:
+        with open(DB_CREDENTIALS_FILE) as f:
+            db_client = MariaDBClient(**json.load(f))
+    else:
+        db_client = None
+        print("We're running offline: brace yourselves!")
     db_ingredient_synonyms = get_db_ingredient_synonyms(db_client)
     db_ingredient_ids = get_db_ingredient_ids(db_client)
 
-    formula_files = [item for sub_list in create_pdf_dictionary(FORMULAS_PATH).values() for item in sub_list]
-    
+    formula_files = [item for sub_list in create_pdf_dictionary(
+        FORMULAS_PATH).values() for item in sub_list]
+
     start_index = get_start_index(formula_files)
-    
+
     for index, formula_path in enumerate(formula_files[start_index:]):
         relative_formula_path = formula_path.replace(FORMULAS_PATH, '')
         formula_file = relative_formula_path.split('/')[-1].replace('.pdf', '')
@@ -373,8 +421,10 @@ if __name__ == "__main__":
         """)
         print('\n', header_text)
 
-        source = '/'.join(formula_path.split('/')[:-1]).split(BASE_FORMULAS_PATH)[1]
-        formula, raw_file_extract = extract_structure_perfume_formula(formula_path, source)
+        source = '/'.join(formula_path.split('/')
+                          [:-1]).split(BASE_FORMULAS_PATH)[1]
+        formula, raw_file_extract = extract_structure_perfume_formula(
+            formula_path, source)
 
         translated_formula, new_ingredient_synonyms = translate_formula(
             formula, db_ingredient_synonyms, raw_file_extract)
@@ -388,44 +438,49 @@ if __name__ == "__main__":
         print(tables_text)
 
         insert_answer = False
-        if INSERT_PROMPT:
-            inspect_choices = ["Read extract", "Alter data"]
-            insert_answer = inspect_choices[0]
-            while insert_answer in inspect_choices:
-                insert_question = inquirer.List(
-                    "question",
-                    message=f"Insert formula and new ingredients? [{relative_formula_path.split('/')[-1]}]",
-                    choices=["Yes", "No"] + inspect_choices,
-                )
-                insert_answer = inquirer.prompt([insert_question])["question"]
+        inspect_choices = ["Read extract", "Alter data"]
+        insert_answer = inspect_choices[0]
+        while insert_answer in inspect_choices:
+            insert_question = inquirer.List(
+                "question",
+                message=f"Insert formula and new ingredients? [{relative_formula_path.split('/')[-1]}]",
+                choices=["Yes", "No"] + inspect_choices,
+            )
+            insert_answer = inquirer.prompt([insert_question])["question"]
 
-                if insert_answer == inspect_choices[0]:
-                    print(f"{raw_file_extract}\n{json.dumps(formula)}\n")
-                elif insert_answer == inspect_choices[1]:
-                    change_choices = ['Formula', 'Synonyms']
-                    change_question = inquirer.List(
-                        "question",
-                        message='Change formula or new synonyms?',
-                        choices=change_choices,
-                    )
-                    change_answer = inquirer.prompt(
-                        [change_question])["question"]
-                    if change_answer == change_choices[0]:
-                        translated_formula = correct_dictionary(
-                            translated_formula)
-                    elif change_answer == change_choices[1]:
-                        new_ingredient_synonyms = correct_dictionary(
-                            new_ingredient_synonyms)
-                    pass
-                elif not INSERT_PROMPT or insert_answer == "Yes":
-                    insert_new_ingredient_synonyms(
-                        new_ingredient_synonyms, formula_file, db_client)
+            if insert_answer == inspect_choices[0]:
+                print(f"{raw_file_extract}\n{json.dumps(formula)}\n")
+            elif insert_answer == inspect_choices[1]:
+                change_choices = ['Formula', 'Synonyms']
+                change_question = inquirer.List(
+                    "question",
+                    message='Change formula or new synonyms?',
+                    choices=change_choices,
+                )
+                change_answer = inquirer.prompt(
+                    [change_question])["question"]
+                if change_answer == change_choices[0]:
+                    translated_formula = correct_dictionary(
+                        translated_formula)
+                elif change_answer == change_choices[1]:
+                    new_ingredient_synonyms = correct_dictionary(
+                        new_ingredient_synonyms)
+                pass
+            elif insert_answer == "Yes":
+                insert_new_ingredient_synonyms(
+                    new_ingredient_synonyms, formula_file, db_client)
+                if IS_ONLINE:
                     insert_new_formula(translated_formula, formula_path, relative_formula_path,
                                        formula_file, raw_file_extract, db_ingredient_ids, db_client, source)
-                    db_ingredient_synonyms = {
-                        **db_ingredient_synonyms,
-                        **new_ingredient_synonyms,
-                    }
+                else:
+                    print(
+                        "Not inserting the formula into the DB because we're offline: please run this index again later")
+                db_ingredient_synonyms = {
+                    **db_ingredient_synonyms,
+                    **new_ingredient_synonyms,
+                }
+                with open(DB_INGREDIENT_SYNONYMS_CACHE_FILE, "w") as f:
+                    json.dump(db_ingredient_synonyms, f)
 
 
 # Create readers for different kinds of pdfs depending on pdf properties, including path
