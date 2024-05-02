@@ -342,6 +342,16 @@ def correct_dictionary(dictionary):
     return json.loads(new_dictionary)
 
 
+def get_start_index(formula_files):
+    index_answer = input(f"Type the index or name of the file you want to start with [0]: ")
+    try:
+        return int(index_answer or 0)
+    except:
+        for index, formula_path in enumerate(formula_files):
+            if index_answer in formula_path:
+                return index
+    raise Exception("No numeric index or existing file string given")
+
 if __name__ == "__main__":
     INSERT_PROMPT = True
 
@@ -352,7 +362,7 @@ if __name__ == "__main__":
 
     formula_files = [item for sub_list in create_pdf_dictionary(FORMULAS_PATH).values() for item in sub_list]
     
-    start_index = int(input(f"Start from which index [0]: ") or 0)
+    start_index = get_start_index(formula_files)
     
     for index, formula_path in enumerate(formula_files[start_index:]):
         relative_formula_path = formula_path.replace(FORMULAS_PATH, '')
