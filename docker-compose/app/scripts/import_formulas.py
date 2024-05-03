@@ -119,7 +119,7 @@ def get_db_ingredient_synonyms(db_client):
             db_ingredient_synonyms[synonyms_row['synonym']
                                    ] = synonyms_row['name']
 
-        with open(DB_INGREDIENT_SYNONYMS_CACHE_FILE, "w") as f:
+        with open(DB_INGREDIENT_SYNONYMS_CACHE_FILE, 'a') as f:
             json.dump(db_ingredient_synonyms, f)
 
         return db_ingredient_synonyms
@@ -138,7 +138,7 @@ def get_db_ingredient_ids(db_client):
         for ingredients_row in ingredients_rows:
             db_ingredient_ids[ingredients_row['name']] = ingredients_row['id']
 
-        with open(DB_INGREDIENT_IDS_CACHE_FILE, "w") as f:
+        with open(DB_INGREDIENT_IDS_CACHE_FILE, 'a') as f:
             json.dump(db_ingredient_ids, f)
 
         return db_ingredient_ids
@@ -289,7 +289,7 @@ def insert_new_ingredient_synonyms(new_ingredient_synonyms, formula_name, db_cli
                              update_statement_override="UPDATE ing = VALUES(ing), source = CONCAT(source, ', ', VALUES(source))"
                              )
         else:
-            with open(DB_NEW_INGREDIENT_SYNONYMS_BUFFER_FILE, "w") as f:
+            with open(DB_NEW_INGREDIENT_SYNONYMS_BUFFER_FILE, 'a') as f:
                 db_new_ingredient_synonyms_buffer = json.load(f)
                 json.dump(merge_dictionaries(
                     db_new_ingredient_synonyms_buffer, synonyms_dict, 'synonym'), f)
@@ -396,7 +396,7 @@ if __name__ == "__main__":
     if USE_REMOTE_DB:
         with open(DB_CREDENTIALS_FILE) as f:
             # db_client = MariaDBClient(**json.load(f))
-            db_client = MariaDBClient({**json.load(f), **{'host': 'localhost'}})
+            db_client = MariaDBClient(**{**json.load(f), **{'host': '127.0.0.1'}})
     else:
         db_client = None
         print("We're running offline: brace yourselves!")
@@ -475,7 +475,7 @@ if __name__ == "__main__":
                     **db_ingredient_synonyms,
                     **new_ingredient_synonyms,
                 }
-                with open(DB_INGREDIENT_SYNONYMS_CACHE_FILE, "w") as f:
+                with open(DB_INGREDIENT_SYNONYMS_CACHE_FILE, 'a') as f:
                     json.dump(db_ingredient_synonyms, f)
 
 

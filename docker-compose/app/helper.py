@@ -16,10 +16,10 @@ def load_json_if_exists(file_path):
             with open(file_path, 'r') as f:
                 return json.load(f)
         except json.JSONDecodeError:
-            print("Error: Invalid JSON data in the file.")
+            print(f"Error: Invalid JSON data in the {file_path.split('/')[-1]} file.")
             return None
     else:
-        print("File not found.")
+        print(f"File {file_path.split('/')[-1]} not found.")
         return None
 
 def merge_dictionaries(file_path, new_dictionaries, key):
