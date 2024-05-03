@@ -395,7 +395,8 @@ def get_start_index(formula_files):
 if __name__ == "__main__":
     if USE_REMOTE_DB:
         with open(DB_CREDENTIALS_FILE) as f:
-            db_client = MariaDBClient(**json.load(f))
+            # db_client = MariaDBClient(**json.load(f))
+            db_client = MariaDBClient({**json.load(f), **{'host': 'localhost'}})
     else:
         db_client = None
         print("We're running offline: brace yourselves!")
