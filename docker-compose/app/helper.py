@@ -1,4 +1,58 @@
+import json
+import os.path
 
+def load_json_if_exists(file_path):
+    """Tries to load JSON data from a file if it exists.
+
+    Args:
+        file_path (str): The path to the JSON file.
+
+    Returns:
+        dict: The loaded JSON data as a dictionary, or None if the file doesn't exist or the JSON is invalid.
+    """
+
+    if os.path.isfile(file_path):  # Check if the file exists
+        try:
+            with open(file_path, 'r') as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            print("Error: Invalid JSON data in the file.")
+            return None
+    else:
+        print("File not found.")
+        return None
+
+def merge_dictionaries(file_path, new_dictionaries, key):
+    """Merges dictionaries from a file with new dictionaries, removing duplicates.
+
+    Args:
+        file_path (str): Path to the JSON file containing the original dictionaries.
+        new_dictionaries (list): List of new dictionaries to merge.
+
+    Returns:
+        list: The merged list of dictionaries with duplicates removed.
+    """
+
+    try:
+        # Load existing dictionaries from the file
+        with open(file_path, 'r') as f:
+            existing_dictionaries = json.load(f)
+    except FileNotFoundError:
+        existing_dictionaries = []  # Start with an empty list if the file doesn't exist
+
+    # Create a combined list and a set to track seen key for deduplication
+    combined_dictionaries = existing_dictionaries + new_dictionaries
+    seen_keys = set()
+
+    # Filter duplicates, prioritizing 'new_dictionaries'
+    merged_dictionaries = []
+    for dictionary in combined_dictionaries:
+        key = dictionary[key]
+        if key not in seen_keys:
+            merged_dictionaries.append(dictionary)
+            seen_keys.add(key)
+
+    return merged_dictionaries
 
 def create_dict_list(header, data):
     """

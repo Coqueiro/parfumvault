@@ -16,6 +16,7 @@ from nltk.metrics.distance import jaro_winkler_similarity
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 from constants import DB_CREDENTIALS_FILE, APP_PATH, DB_INGREDIENT_IDS_CACHE_FILE, DB_INGREDIENT_SYNONYMS_CACHE_FILE, DB_NEW_INGREDIENT_SYNONYMS_BUFFER_FILE, IS_ONLINE
+from helper import load_json_if_exists, merge_dictionaries
 
 
 BASE_FORMULAS_PATH = f"{APP_PATH}/formulas/"
@@ -101,11 +102,9 @@ def clean_ingredient_name(ingredient_name):
 
 def get_db_ingredient_synonyms(db_client):
     if IS_ONLINE:
-        # TODO: Add a if file exists and loads a dictionary with len > 0
-        # TODO: The idea here is to pickup any cache created and insert it to the db asap
         # Insert any new ingredient synonyms buffer before getting started
-        with open(DB_NEW_INGREDIENT_SYNONYMS_BUFFER_FILE, "r") as f:
-            db_new_ingredient_synonyms_buffer = json.load(f)
+        db_new_ingredient_synonyms_buffer = load_json_if_exists(DB_NEW_INGREDIENT_SYNONYMS_BUFFER_FILE)
+        if len(db_new_ingredient_synonyms_buffer or []) > 0:
             db_client.upsert(table_name="synonyms", data=db_new_ingredient_synonyms_buffer,
                 update_statement_override="UPDATE ing = VALUES(ing), source = CONCAT(source, ', ', VALUES(source))"
             )
@@ -290,11 +289,8 @@ def insert_new_ingredient_synonyms(new_ingredient_synonyms, formula_name, db_cli
                              )
         else:
             with open(DB_NEW_INGREDIENT_SYNONYMS_BUFFER_FILE, "w") as f:
-                # TODO: Make sure this is adding new entries and not deleting the existing ones
-                # TODO: Maybe by reading the existing file and doing a unique operation here using
-                # TODO: `synonym` as unique key
                 db_new_ingredient_synonyms_buffer = json.load(f)
-                json.dump(db_new_ingredient_synonyms_buffer + synonyms_dict, f)
+                json.dump(merge_dictionaries(db_new_ingredient_synonyms_buffer, synonyms_dict, 'synonym'), f)
 
 
 def insert_new_formula(translated_formula, formula_path, relative_formula_path, formula_file,
