@@ -10,4 +10,4 @@ DB_INGREDIENT_SYNONYMS_CACHE_FILE = f"{DB_CACHE_FOLDER}/db_ingredient_synonyms.j
 DB_INGREDIENT_IDS_CACHE_FILE = f"{DB_CACHE_FOLDER}/db_ingredient_ids.json"
 DB_NEW_INGREDIENT_SYNONYMS_BUFFER_FILE = f"{DB_CACHE_FOLDER}/new_ingredient_synonyms.json"
 
-IS_ONLINE = True
+USE_REMOTE_DB = True

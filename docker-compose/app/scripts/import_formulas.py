@@ -15,7 +15,7 @@ from nltk.corpus import stopwords
 from nltk.metrics.distance import jaro_winkler_similarity
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
-from constants import DB_CREDENTIALS_FILE, APP_PATH, DB_INGREDIENT_IDS_CACHE_FILE, DB_INGREDIENT_SYNONYMS_CACHE_FILE, DB_NEW_INGREDIENT_SYNONYMS_BUFFER_FILE, IS_ONLINE
+from constants import DB_CREDENTIALS_FILE, APP_PATH, DB_INGREDIENT_IDS_CACHE_FILE, DB_INGREDIENT_SYNONYMS_CACHE_FILE, DB_NEW_INGREDIENT_SYNONYMS_BUFFER_FILE, USE_REMOTE_DB
 from helper import load_json_if_exists, merge_dictionaries
 
 
@@ -101,13 +101,14 @@ def clean_ingredient_name(ingredient_name):
 
 
 def get_db_ingredient_synonyms(db_client):
-    if IS_ONLINE:
+    if USE_REMOTE_DB:
         # Insert any new ingredient synonyms buffer before getting started
-        db_new_ingredient_synonyms_buffer = load_json_if_exists(DB_NEW_INGREDIENT_SYNONYMS_BUFFER_FILE)
+        db_new_ingredient_synonyms_buffer = load_json_if_exists(
+            DB_NEW_INGREDIENT_SYNONYMS_BUFFER_FILE)
         if len(db_new_ingredient_synonyms_buffer or []) > 0:
             db_client.upsert(table_name="synonyms", data=db_new_ingredient_synonyms_buffer,
-                update_statement_override="UPDATE ing = VALUES(ing), source = CONCAT(source, ', ', VALUES(source))"
-            )
+                             update_statement_override="UPDATE ing = VALUES(ing), source = CONCAT(source, ', ', VALUES(source))"
+                             )
 
         synonyms_rows = db_client.execute(
             'SELECT ing as name, synonym FROM pvault.synonyms')
@@ -128,7 +129,7 @@ def get_db_ingredient_synonyms(db_client):
 
 
 def get_db_ingredient_ids(db_client):
-    if IS_ONLINE:
+    if USE_REMOTE_DB:
         ingredients_rows = db_client.execute(
             'SELECT id, name FROM pvault.ingredients')
 
@@ -283,14 +284,15 @@ def insert_new_ingredient_synonyms(new_ingredient_synonyms, formula_name, db_cli
                 'source': f"Formula: {formula_name}",
             })
 
-        if IS_ONLINE:
+        if USE_REMOTE_DB:
             db_client.upsert(table_name="synonyms", data=synonyms_dict,
                              update_statement_override="UPDATE ing = VALUES(ing), source = CONCAT(source, ', ', VALUES(source))"
                              )
         else:
             with open(DB_NEW_INGREDIENT_SYNONYMS_BUFFER_FILE, "w") as f:
                 db_new_ingredient_synonyms_buffer = json.load(f)
-                json.dump(merge_dictionaries(db_new_ingredient_synonyms_buffer, synonyms_dict, 'synonym'), f)
+                json.dump(merge_dictionaries(
+                    db_new_ingredient_synonyms_buffer, synonyms_dict, 'synonym'), f)
 
 
 def insert_new_formula(translated_formula, formula_path, relative_formula_path, formula_file,
@@ -391,7 +393,7 @@ def get_start_index(formula_files):
 
 
 if __name__ == "__main__":
-    if IS_ONLINE:
+    if USE_REMOTE_DB:
         with open(DB_CREDENTIALS_FILE) as f:
             db_client = MariaDBClient(**json.load(f))
     else:
@@ -462,7 +464,7 @@ if __name__ == "__main__":
             elif insert_answer == "Yes":
                 insert_new_ingredient_synonyms(
                     new_ingredient_synonyms, formula_file, db_client)
-                if IS_ONLINE:
+                if USE_REMOTE_DB:
                     insert_new_formula(translated_formula, formula_path, relative_formula_path,
                                        formula_file, raw_file_extract, db_ingredient_ids, db_client, source)
                 else:
