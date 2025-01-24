@@ -6,29 +6,25 @@ require_once(__ROOT__.'/inc/opendb.php');
 require_once(__ROOT__.'/inc/settings.php');
 require_once(__ROOT__.'/func/formatBytes.php');
 require_once(__ROOT__.'/func/validateInput.php');
-require_once(__ROOT__.'/func/sanChar.php');
 require_once(__ROOT__.'/func/profileImg.php');
 
 
-$ingID = sanChar(mysqli_real_escape_string($conn, base64_decode($_GET["id"])));
-if($ingID){
-	if(empty(mysqli_num_rows(mysqli_query($conn, "SELECT id FROM ingredients WHERE name = '$ingID'")))){
-		if(mysqli_query($conn, "INSERT INTO ingredients (name) VALUES ('$ingID')")){
-			$msg='<div class="alert alert-info alert-dismissible"><strong>Info:</strong> ingredient '.$ingID.' added</div>';
-		}
+if($ingID = $_GET["id"]){
+	if(!mysqli_num_rows(mysqli_query($conn, "SELECT id FROM ingredients WHERE id = '$ingID'"))){
+		echo '<div class="alert alert-danger">No such ingredient found</div>';
+		return;
 	}
 }
-
 $res_ingTypes = mysqli_query($conn, "SELECT id,name FROM ingTypes ORDER BY name ASC");
 $res_ingStrength = mysqli_query($conn, "SELECT id,name FROM ingStrength ORDER BY name ASC");
 $res_ingCategory = mysqli_query($conn, "SELECT id,image,name,notes FROM ingCategory ORDER BY name ASC");
 $res_ingProfiles = mysqli_query($conn, "SELECT id,name FROM ingProfiles ORDER BY id ASC");
 
-$ing = mysqli_fetch_array(mysqli_query($conn, "SELECT * FROM ingredients WHERE name = '$ingID'"));
+$ing = mysqli_fetch_array(mysqli_query($conn, "SELECT * FROM ingredients WHERE id = '$ingID'"));
 
 ?>
 <!doctype html>
-<html lang="en">
+<html lang="en" data-bs-theme="<?=$settings['bs_theme']?>">
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	<link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png">
@@ -61,16 +57,24 @@ $ing = mysqli_fetch_array(mysqli_query($conn, "SELECT * FROM ingredients WHERE n
 	
 <script>
 var myIngName = "<?=$ing['name']?>";
-var myIngID = '';
+var newIngName = "<?=$_GET["newIngName"]?>";
+var newIngCAS = "<?=$_GET["newIngCAS"]?>";
+var myIngID;
 <?php if($ing['id']){ ?>
 
-var myIngID = "<?=$ing['id']?>";
+myIngID = "<?=$ing['id']?>";
 var myCAS = "<?=$ing['cas']?>";
 var myPCH = "<?=$settings['pubChem']?>";
 <?php } ?>
 
 
 </script>
+<style>
+body {
+  overflow-y:hidden;
+}
+
+</style>
 </head>
 
 <body>
@@ -81,10 +85,10 @@ var myPCH = "<?=$settings['pubChem']?>";
 				<div class="btn-group">
 					<button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fa fa-bars mx-2"></i>Actions</button>
 					<div class="dropdown-menu">
-						<li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#cloneIng"><i class="fa-solid fa-copy mx-2"></i>Clone ingredient</a></li>
+						<li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#duplicateIng"><i class="fa-solid fa-copy mx-2"></i>Duplicate ingredient</a></li>
 						<li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#renameIng"><i class="fa-regular fa-pen-to-square mx-2"></i>Rename ingredient</a></li>
                         <li><a class="dropdown-item" href="/pages/export.php?format=json&kind=single-ingredient&id=<?=$ing['id']?>"><i class="fas fa-download mx-2"></i>Export as JSON</a></li>
-						<li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#genSDS"><i class="fa-solid fa-file-prescription mx-2"></i>Generate SDS</a></li>
+						<li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#genDOC"><i class="fa-solid fa-file-prescription mx-2"></i>Generate document</a></li>
 						<li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#genQRC"><i class="fa-solid fa-qrcode mx-2"></i>Generate QR Code</a></li>
 					</div>
 				</div>
@@ -95,7 +99,7 @@ var myPCH = "<?=$settings['pubChem']?>";
 		<span class="mgmIngHeaderCAS" id="mgmIngHeaderCAS"><?=$ing['cas']?></span>
 	</div>
 
-	<div id="ingMsg"><?=$msg?></div>
+	<div id="ingMsg"></div>
 	<div id="ingOverview"></div>
 	<div class="mgmIngHeader-with-separator-full"></div>
 	<!-- Nav tabs -->
@@ -134,9 +138,11 @@ var myPCH = "<?=$settings['pubChem']?>";
                 	<a href="#pubChem" id="pubChem_tab" class="nav-link" aria-selected="false" role="tab" data-bs-toggle="tab"><i class="fa fa-atom mx-2"></i>Pub Chem</a>
                 </li>
 			<?php } ?>  
-			<li class="nav-item" role="presentation">
+			<!--
+            <li class="nav-item" role="presentation">
             	<a href="#privacy" id="privacy_tab" class="nav-link" aria-selected="false" role="tab" data-bs-toggle="tab"><i class="fa fa-user-secret mx-2"></i>Privacy</a>
-                </li>   
+             </li>
+             -->
 			<li class="nav-item" role="presentation">
             	<a href="#whereUsed" id="whereUsed_tab" class="nav-link" aria-selected="false" role="tab" data-bs-toggle="tab"><i class="fa fa-random mx-2"></i>Where used?</a>
             </li>
@@ -261,20 +267,20 @@ var myPCH = "<?=$settings['pubChem']?>";
         </div>
     </div>
 
-<!-- Modal Clone-->
-<div class="modal fade" id="cloneIng" data-bs-backdrop="static" tabindex="-1" role="dialog" aria-labelledby="cloneIng" aria-hidden="true">
+<!-- Modal Duplicate-->
+<div class="modal fade" id="duplicateIng" data-bs-backdrop="static" tabindex="-1" role="dialog" aria-labelledby="duplicateIng" aria-hidden="true">
 	<div class="modal-dialog" role="document">
 		<div class="modal-content">
 			<div class="modal-header">
-				<h5 class="modal-title">Clone ingredient <?php echo $ing['name']; ?></h5>
+				<h5 class="modal-title">Duplicate ingredient <?php echo $ing['name']; ?></h5>
 			</div>
 			<div class="modal-body">
-				<div id="clone_msg"></div>
-				Name
-				<input class="form-control" name="cloneIngName" id="cloneIngName" type="text" value="" />            
+				<div id="duplicate_msg"></div>
+				<label for="duplicateIngName" class="form-label">Name</label>
+				<input class="form-control" name="duplicateIngName" id="duplicateIngName" type="text" value="" />            
 				<div class="modal-footer">
 					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-					<input type="submit" name="button" class="btn btn-primary" id="cloneME" value="Clone">
+					<input type="submit" name="button" class="btn btn-primary" id="duplicateME" value="Duplicate">
 				</div>
 			</div>
 		</div>
@@ -289,56 +295,13 @@ var myPCH = "<?=$settings['pubChem']?>";
 				<h5 class="modal-title">Rename ingredient <?php echo $ing['name']; ?></h5>
 			</div>
 			<div class="modal-body">
-            	<div id="warn"><div class="alert alert-warning"><strong>Warning:</strong> If you rename the ingredient, will affect any formulas that using it as well. Please refer to <strong>Where Used</strong> section to get a list of formulas if any.</div></div>
+            	<div id="warn"><div class="alert alert-warning"><i class="fa-solid fa-circle-info mx-2"></i>Renaming the ingredient, will affect any formulas that using it as well. Please refer to <strong>Where Used?</strong> section to get a list of formulas using it, if any.</div></div>
 				<div id="rename_msg"></div>
-				Name
+				<label for="renameIngName" class="form-label">New name</label>
 				<input class="form-control" name="renameIngName" id="renameIngName" type="text" value="" />            
 				<div class="modal-footer">
 					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
 					<input type="submit" name="button" class="btn btn-primary" id="renameME" value="Rename">
-				</div>
-			</div>
-		</div>
-	</div>
-</div>
-
-<!-- Modal Gen SDS-->
-<div class="modal fade" id="genSDS" data-bs-backdrop="static" tabindex="-1" role="dialog" aria-labelledby="genSDS" aria-hidden="true">
-	<div class="modal-dialog" role="document">
-		<div class="modal-content">
-			<div class="modal-header">
-				<h5 class="modal-title">Generate SDS for <?php echo $ing['name']; ?></h5>
-			</div>
-			<div class="modal-body">
-                <div id="warn">
-                <div class="alert alert-warning">Please note: This feature its under development and in preview state at the moment.</div>
-                	<div class="alert alert-info">A template is required in order to generate an SDS document.
-                To create a new template, go to <a href="/?do=settings" target="_blank">settings</a> and create a new one under HTML Templates.
-                For the available parameters please refer to the documentation <a href="https://www.perfumersvault.com/knowledge-base/html-templates/" target="_blank">here</a>.</div>
-                </div>
-				<div id="sds_res"></div>
-				Select SDS template:
-                <select class="form-control" name="template" id="template">
-                <?php
-                    $res = mysqli_query($conn, "SELECT id, name FROM templates ORDER BY name ASC");
-                    while ($q = mysqli_fetch_array($res)){
-                    echo '<option value="'.$q['id'].'">'.$q['name'].'</option>';
-                }
-                ?>
-                </select>
-                
-               	Select Supplier:
-                <select class="form-control" name="ingSupplier" id="ingSupplier">
-                <?php
-                    $res = mysqli_query($conn, "SELECT id, name FROM ingSuppliers ORDER BY name ASC");
-                    while ($q = mysqli_fetch_array($res)){
-                    echo '<option value="'.$q['id'].'">'.$q['name'].'</option>';
-                }
-                ?>
-                </select>
-				<div class="modal-footer">
-					<button type="button" class="btn btn-secondary" id="dis-genSDS" data-bs-dismiss="modal">Close</button>
-					<input type="submit" name="button" class="btn btn-primary" id="generateSDS" value="Generate">
 				</div>
 			</div>
 		</div>
@@ -353,11 +316,11 @@ var myPCH = "<?=$settings['pubChem']?>";
 				<h5 class="modal-title"><?php echo $ing['name']; ?></h5>
 			</div>
 			<div class="modal-body">
-            	<div class="alert alert-info">Use PV APP to scan the QR</div>
+            	<div class="alert alert-info"><i class="fa-solid fa-circle-info mx-2"></i>Use PV APP to scan the QR</div>
 				
 				<div id="QRC" class="d-flex justify-content-center"></div>   
                 <hr />
-                <div class="alert alert-info">Download from the App Store</div>
+                <div class="alert alert-info"><i class="fa-solid fa-circle-info mx-2"></i>Download from the <a href="#">App Store</a></div>
 				<div class="modal-footer">
 					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
 				</div>
@@ -365,89 +328,43 @@ var myPCH = "<?=$settings['pubChem']?>";
 		</div>
 	</div>
 </div>
-<script type="text/javascript" language="javascript">
 
-$(document).ready(function() {
-	$('[rel=tipsy]').tooltip({placement: 'auto'});
-
-	$('#general').on('click', '[id*=saveGeneral]', function () {
-		<?php if(empty($ing['id'])){ ?>
-			if($.trim($("#name").val()) == ''){
-				$('#ingMsg').html('<div class="alert alert-danger alert-dismissible"><a href="#" class="close" data-bs-dismiss="alert" aria-label="close">x</a><strong>Error:</strong> Name is required</div>');
-				return;
-   			}
-		<?php } ?>
-		$.ajax({ 
-			url: 'update_data.php', 
-			type: 'POST',
-			data: {
-				manage: 'ingredient',
-				tab: 'general',
-				ingID: myIngID,
-				
-				name: $("#name").val(),
-				INCI: $("#INCI").val(),
-				cas: $("#cas").val(),
-				einecs: $("#einecs").val(),
-				reach: $("#reach").val(),
-				fema: $("#fema").val(),
-				isAllergen: $("#isAllergen").is(':checked'),
-				purity: $("#purity").val(),
-				solvent: $("#solvent").val(),
-				profile: $("#profile").val(),					
-				type: $("#type").val(),
-				strength: $("#strength").val(),
-				category: $("#category").val(),
-				physical_state: $("#physical_state").val(),
-				odor: $("#odor").val(),
-				notes: $("#notes").val(),
-				<?php if($ing['name']){?>
-					ing: '<?=$ing['name'];?>'
-				<?php } ?>
-			},
-			dataType: 'json',   			
-			success: function (data) {
-				if(data.success){
-					$('#mgmIngHeaderCAS').html($("#cas").val());
-					$('#IUPAC').html($("#INCI").val());
-					
-					var msg = '<div class="alert alert-success alert-dismissible"><a href="#" class="close" data-bs-dismiss="alert" aria-label="close">x</a>' + data.success + '</div>';
-				}else{
-					var msg ='<div class="alert alert-danger alert-dismissible"><a href="#" class="close" data-bs-dismiss="alert" aria-label="close">x</a>' + data.error + '</div>';
-				}
-				
-				$('#ingMsg').html(msg);
-				
-				if ($('#name').val()) {
-					window.location = 'mgmIngredient.php?id=' + btoa($('#name').val());
-				}
-			    <?php if($ing['id']){ ?>
-				reload_overview();
-				<?php } ?>
-			}
-		});
-	});
+<!-- Modal Gen DOC-->
+<div class="modal fade" id="genDOC" data-bs-backdrop="static" tabindex="-1" role="dialog" aria-labelledby="genDOC" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Generate document for <?php echo $ing['name']; ?></h5>
+			</div>
+			<div class="modal-body">
+                <div id="warn">
+                <div class="alert alert-info"><strong>Create a PDF document with the basic ingredient data.</strong></div>
+				<div id="doc_res"></div>                               
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" id="dis-genDOC" data-bs-dismiss="modal">Close</button>
+					<input type="submit" name="button" class="btn btn-primary" id="generateDOC" value="Generate">
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
 
 
 
-	$('#purity').bind('input', function() {
-		var purity = $(this).val();
-		if(purity == 100){
-			$("#solvent").prop("disabled", true); 
-			$("#solvent").val(''); 
-		}else{
-			$("#solvent").prop("disabled", false);
-		}
-		$('.selectpicker').selectpicker('refresh');
-	});
-	
-});//end doc
-
-</script>
 <script src="/js/mgmIngredient.js"></script>
 <script src="/js/ingredient.tabs.js"></script>
 
 </div>
+<!-- TOAST -->
+<div class="position-fixed top-0 start-50 translate-middle-x p-3" style="z-index: 11">
+  	<div id="liveToast" class="toast hide" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true">
+    	<div class="toast-header">
+      		<strong class="me-auto" id="toast-title">...</strong>
+      		<button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+  		</div>
+	</div>
+</div>
+
 </div>
 </body>
 </html>

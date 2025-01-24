@@ -10,7 +10,6 @@ require_once(__ROOT__.'/inc/settings.php');
 
 require_once(__ROOT__.'/func/getIngSupplier.php');
 require_once(__ROOT__.'/func/searchIFRA.php');
-require_once(__ROOT__.'/func/getCatByID.php');
 require_once(__ROOT__.'/func/getDocument.php');
 
 $defCatClass = $settings['defCatClass'];
@@ -61,7 +60,7 @@ if($_POST['adv']){
 
 $extra = "ORDER BY ".$order_by." ".$order;
 
-$s = trim($_POST['search']['value']);
+$s = trim(mysqli_real_escape_string($conn,$_POST['search']['value'] ?: $_POST['pvSearch']));
 
 if($s != ''){
    $t = '';
@@ -95,10 +94,11 @@ foreach ($ingredients as $ingredient) {
 	$r['category']['name'] = (string)$cat['name']?: 'N/A';
 	$r['category']['image'] = (string)$cat['image']?: '/img/pv_molecule.png';
 
-	if(($limit = searchIFRA($ingredient['cas'],$ingredient['name'],null,$conn,$defCatClass)) && $ingredient['byPassIFRA'] == 0){
-		$limit = explode(' - ', $limit);		
-		$r['usage']['limit'] = (float)$limit['0'];
-		$r['usage']['reason'] = (string)$limit['1'];
+
+	if(($limit = searchIFRA($ingredient['cas'],$ingredient['name'],null,$defCatClass)) && $ingredient['byPassIFRA'] == 0){
+		//$limit = explode(' - ', $limit);		
+		$r['usage']['limit'] = (float)$limit['val'];
+		$r['usage']['reason'] = (string)$limit['risk'];
 	}else{
 		$r['usage']['limit'] = number_format((float)$ingredient["$defCatClass"], $settings['qStep']) ?: 100;
 		$r['usage']['reason'] = (int)$ingredient['usage_type'];
@@ -108,6 +108,7 @@ foreach ($ingredients as $ingredient) {
 	if($a = getIngSupplier($ingredient['id'],0,$conn)){ 
 		$j = 0;
 		unset($r['supplier']);
+		$err = null;
 		foreach ($a as $b){
 			$r['supplier'][$j]['name'] = (string)$b['name'];
 			$r['supplier'][$j]['link'] = (string)$b['supplierLink'];
@@ -116,6 +117,7 @@ foreach ($ingredients as $ingredient) {
 		}
 	}else{
 		$r['supplier'] = null;
+		$err = "No supplier is configured.\nYou won't be able to use this ingredient in a formula, unless at least one supplier is configured.";
 	}	
 	
 	if($d = getDocument($ingredient['id'],1,$conn)){
@@ -131,6 +133,7 @@ foreach ($ingredients as $ingredient) {
 	}
 	$r['stock'] = number_format((float)getIngSupplier($ingredient['id'],1,$conn)['stock'], $settings['qStep']) ?: 0;
 	
+	$r['error'] = $err;
 	$rx[]=$r;
 }
 

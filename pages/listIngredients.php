@@ -47,11 +47,11 @@ $defCatClass = $settings['defCatClass'];
    				<span class="visually-hidden">Toggle Dropdown</span>
             </button>
             <ul class="dropdown-menu dropdown-menu-right">
-                <?php foreach (loadModules('suppliers') as $search){ ?>
+                <?php foreach (loadModules('suppliers') as $provider){ ?>
                 <li>
-                    <a href="#" class="supplier dropdown-item" data-provider="<?=$search['fileName']?>">
-                        <span class="<?=$search['icon']?>"></span>
-                        <span class="label-icon"><?=$search['name']?></span>
+                    <a href="#" class="supplier dropdown-item" data-provider="<?=$provider['fileName']?>">
+                        <span class="<?=$provider['icon']?>"></span>
+                        <span class="label-icon"><?=$provider['name']?></span>
                     </a>
                 </li>
                 <?php } ?>
@@ -61,7 +61,7 @@ $defCatClass = $settings['defCatClass'];
 	</div>
 </div>
 
-<table id="tdDataIng" class="table table-striped table-bordered" style="width:100%">
+<table id="tdDataIng" class="table table-striped" style="width:100%">
   <thead>
       <tr>
           <th>Name</th>
@@ -78,56 +78,122 @@ $defCatClass = $settings['defCatClass'];
    </thead>
 </table>
 
-<script type="text/javascript">
-
+<script>
 $(document).ready(function() {
 	
 	var tdDataIng = $('#tdDataIng').DataTable( {
-	columnDefs: [
-		{ className: 'pv_vertical_middle text-center', targets: '_all' },
-		{ orderable: false, targets: [1,5,6,7,8,9]},
-		{ responsivePriority: 1, targets: 0 }
-	],
-	search: {
-    	search: "<?=$_GET['search']?>"
-  	},
-	dom: 'lr<"#advanced_search">tip',
-	initComplete: function(settings, json) {
-        $("#advanced_search").html('<span><hr /><a href="#" class="advanced_search_box mb-2" data-bs-toggle="modal" data-bs-target="#adv_search">Advanced Search</a></span>');
-		$("#tdDataIng_filter").detach().appendTo('#pv_search');
-    },
-	processing: true,
-	serverSide: true,
-	searching: true,
-	responsive: true,
-	language: {
-		loadingRecords: '&nbsp;',
-		processing: 'Blending...',
-		zeroRecords: '<div class="alert alert-warning"><strong>Nothing found, try <a href="#" data-bs-toggle="modal" data-bs-target="#adv_search">advanced</a> search instead?</strong></div>',
-		search: 'Quick Search:',
-		searchPlaceholder: 'Name, CAS, EINECS, IUPAC, odor..',
+		columnDefs: [
+			{ className: 'pv_vertical_middle text-center', targets: '_all' },
+			{ orderable: false, targets: [1,2,5,6,7,8,9]},
+			{ responsivePriority: 1, targets: 0 }
+		],
+		search: {
+			search: "<?=$_GET['search']?>"
 		},
-	ajax: {	
-		url: '/core/list_ingredients_data.php',
-		type: 'POST',
-		data: function(d) {
-            d.provider = $('#pv_search_btn').attr('data-provider')
-			d.adv = '<?=$_GET['adv']?:0?>'
-			d.profile = '<?=$_GET['profile']?:null?>'
-			d.name = '<?=$_GET['name']?:null?>'
-			d.cas = '<?=$_GET['cas']?:null?>'
-			d.einecs = '<?=$_GET['einecs']?:null?>'
-			d.odor = '<?=$_GET['odor']?:null?>'
-			d.cat = '<?=$_GET['cat']?:null?>'
-			d.synonym = '<?=$_GET['synonym']?:null?>'
-			if (d.order.length>0){
-                d.order_by = d.columns[d.order[0].column].data
-                d.order_as = d.order[0].dir
-            }
-        },
-		dataType: 'json',
+		dom: 'lr<"#advanced_search">tip',
+		initComplete: function(settings, json) {
+			$("#advanced_search").html(`
+				<span>
+					<hr />
+					<div id="filter" class="d-flex flex-wrap mb-2"></div>
+					<a href="#" class="advanced_search_box" data-bs-toggle="modal" data-bs-target="#adv_search">
+						<i class="fa-solid fa-magnifying-glass mx-2"></i>Advanced Search
+					</a>
+				</span>
+			`);
+		
+			$("#tdDataIng_filter").detach().appendTo('#pv_search');
+		
+			var filters = {
+				"Ingredient name": $('#ing_name').val(),
+				"CAS#": $('#ing_cas').val(),
+				"EINECS": $('#ing_einecs').val(),
+				"Odor": $('#ing_odor').val(),
+				"Profile": $('#ing_profile').val(),
+				"Category": $('#ing_category').find('option:selected').data('text'),
+				"Synonym": $('#ing_synonym').val()
+			};
+
+			$.each(filters, function(key, value) {
+				if (value) {
+					$('#filter').append(`
+						<span class="badge rounded-pill d-block p-2 mx-2 badge-primary">
+							${key}: ${value}
+							<span class="ms-1" data-fa-transform="shrink-2"></span>
+							<button type="button" class="btn-close btn-close-white mx-1" aria-label="Remove" data-field="${key}"></button>
+						</span>
+						</span>
+					`);
+				}
+			});
+	
+			$('#filter').on('click', '.btn-close', function() {
+				var field = $(this).data('field');
+		
+				switch (field) {
+					case "Ingredient name":
+						$('#ing_name').val('');
+						break;
+					case "CAS#":
+						$('#ing_cas').val('');
+						break;
+					case "EINECS":
+						$('#ing_einecs').val('');
+						break;
+					case "Odor":
+						$('#ing_odor').val('');
+						break;
+					case "Profile":
+						$('#ing_profile').val('').trigger('change');
+						break;
+						
+					case "Category":
+						$('#ing_category').val('').trigger('change');
+						break;
+						
+					case "Synonym":
+						$('#ing_synonym').val('');
+						break;
+				}
+		
+				tdDataIng.search('').draw();
+				$('#btnAdvSearch').trigger('click');
+				$(this).parent().remove();
+			});
 		},
-	columns: [
+		processing: true,
+		serverSide: true,
+		searching: true,
+		responsive: true,
+		language: {
+			loadingRecords: '&nbsp;',
+			processing: 'Blending...',
+			zeroRecords: '<div class="alert alert-warning mt-2"><i class="fa-solid fa-triangle-exclamation mx-2"></i><strong>Nothing found, try <a href="#" data-bs-toggle="modal" data-bs-target="#adv_search">advanced</a> search instead?</strong></div>',
+			search: 'Quick Search:',
+			searchPlaceholder: 'Name, CAS, EINECS, IUPAC, odor..',
+		},
+		ajax: {	
+			url: '/core/list_ingredients_data.php',
+			type: 'POST',
+			data: function(d) {
+				d.pvSearch =  '<?=$_GET['search']?>'
+				d.provider = $('#pv_search_btn').attr('data-provider')
+				d.adv = '<?=$_GET['adv']?:0?>'
+				d.profile = '<?=$_GET['profile']?:null?>'
+				d.name = '<?=$_GET['name']?:null?>'
+				d.cas = '<?=$_GET['cas']?:null?>'
+				d.einecs = '<?=$_GET['einecs']?:null?>'
+				d.odor = '<?=$_GET['odor']?:null?>'
+				d.cat = '<?=$_GET['cat']?:null?>'
+				d.synonym = '<?=$_GET['synonym']?:null?>'
+				if (d.order.length>0){
+					d.order_by = d.columns[d.order[0].column].data
+					d.order_as = d.order[0].dir
+				}
+			},
+			dataType: 'json',
+		},
+		columns: [
 			  { data : 'name', title: 'Name', render: iName },
 			  { data : 'IUPAC', title: 'IUPAC' },
 			  { data : 'odor', title: 'Description'},
@@ -137,369 +203,468 @@ $(document).ready(function() {
 			  { data : 'stock', title: 'In Stock <i rel="tip" title="The total amount available in stock from all suppliers." class="fas fa-info-circle"></i></span>', render: iStock},
 			  { data : null, title: 'Supplier(s)', render: iSuppliers},
 			  { data : null, title: 'Document(s)', render: iDocs},
-
+	
 			  { data : null, title: '', render: actions},		   
-			 ],
-	order: [[ 0, 'asc' ]],
-	lengthMenu: [[20, 50, 100, 200, 400], [20, 50, 100, 200, 400]],
-	pageLength: 20,
-	displayLength: 20,
-	drawCallback: function( settings ) {
-		extrasShow();
-    },
-	stateSave: true,
-	stateDuration : -1,
-	stateLoadCallback: function (settings, callback) {
-       	$.ajax( {
-           	url: '/core/update_user_settings.php?set=listIngredients&action=load',
-           	dataType: 'json',
-           	success: function (json) {
-               	callback( json );
-				if(json.search.search !== undefined){
-					$('#ing_search').val(json.search.search);
+		],
+		order: [[ 0, 'asc' ]],
+		lengthMenu: [[20, 50, 100, 200, 400], [20, 50, 100, 200, 400]],
+		pageLength: 20,
+		displayLength: 20,
+		drawCallback: function( settings ) {
+			extrasShow();
+		},
+		stateSave: true,
+		stateDuration : -1,
+		stateLoadCallback: function (settings, callback) {
+			$.ajax( {
+				url: '/core/update_user_settings.php?set=listIngredients&action=load',
+				dataType: 'json',
+				success: function (json) {
+					callback( json );
+					if(json.search.search !== undefined){
+						$('#ing_search').val(json.search.search);
+					}
 				}
-           	}
-       	});
-    },
-    stateSaveCallback: function (settings, data) {
-	   $.ajax({
-		 url: "/core/update_user_settings.php?set=listIngredients&action=save",
-		 data: data,
-		 dataType: "json",
-		 type: "POST"
-	  });
-	},
+			});
+		},
+		stateSaveCallback: function (settings, data) {
+		   $.ajax({
+			 url: "/core/update_user_settings.php?set=listIngredients&action=save",
+			 data: data,
+			 dataType: "json",
+			 type: "POST"
+		  });
+		},
 
-});
+	});
 	    
 	$('#ing_search').keyup(function() {
         tdDataIng.search($(this).val()).draw();
     });
 	
-	$('#pv_search').on('click', '[id*=pv_search_btn]', function () {
-		var ingSearch = {};
-		ingSearch.txt = $('#ing_search').val();
-		tdDataIng.search(ingSearch.txt).draw();
+	$("#pv_search_btn").click(function () {
+		var ingSearch = {
+        	txt: $('#ing_search').val()
+    	};
+    	if (tdDataIng) {
+        	tdDataIng.search(ingSearch.txt).draw();
+    	}
 	});
 	
- 
-});
-					   
-function iName(data, type, row, meta){
-	var alg = '';
-	if(row.allergen == 1){
-		var alg = '<span class="ing_alg"><i rel="tip" title="Allergen" class="fas fa-exclamation-triangle"></i></span>';
-	}
-	if(meta.settings.json.source == 'local'){
-		
-		return '<a class="popup-link listIngName listIngName-with-separator" href="/pages/mgmIngredient.php?id=' + btoa(row.name) + '">' + data + '</a>'+alg+'<span class="listIngHeaderSub">CAS: <i class="pv_point_gen subHeaderCAS" rel="tip" title="Click to copy cas" id="cCAS" data-name="'+row.cas+'">'+row.cas+'</i> | EINECS: <i class="pv_point_gen subHeaderCAS">'+row.einecs+'</i></span>';
-	}else{
-		return '<a class="listIngName listIngName-with-separator" href="#">' + data + '</a>'+alg+'<span class="listIngHeaderSub">CAS: <i class="pv_point_gen subHeaderCAS" rel="tip" title="Click to copy cas" id="cCAS" data-name="'+row.cas+'">'+row.cas+'</i> | EINECS: <i class="pv_point_gen subHeaderCAS">'+row.einecs+'</i></span>';
-	}
-}
-
-
-function iProfile(data, type, row, meta){
-	if(meta.settings.json.source == 'local'){
-		if(row.profile){
-			return '<img src="/img/Pyramid/Pyramid_Slice_'+row.profile+'.png" class="img_ing_prof"/>';    
+ 					   
+	function iName(data, type, row, meta) {
+		// Ensure data and row are valid
+		if (!data || !row) return "";
+		// Helper function to escape HTML
+		const escapeHTML = (str) => {
+			return String(str)
+				.replace(/&/g, "&amp;")
+				.replace(/</g, "&lt;")
+				.replace(/>/g, "&gt;")
+				.replace(/"/g, "&quot;")
+				.replace(/'/g, "&#039;");
+		};
+	
+		// Initialize variables for additional indicators
+		let allergenIndicator = "";
+		let errorIndicator = "";
+	
+		// Check if ingredient has allergen
+		if (row.allergen == 1) {
+			allergenIndicator =
+				'<span class="ing_alg"><i rel="tip" title="Allergen" class="fas fa-exclamation-triangle"></i></span>';
+		}
+	
+		// Check if ingredient has error
+		if (row.error) {
+			errorIndicator = `<span class="ing_alg"><i rel="tip" title="${escapeHTML(
+				row.error
+			)}" class="fas fa-xmark text-danger"></i></span>`;
+		}
+	
+		// Determine source and construct the link and additional details
+		const isLocal = meta?.settings?.json?.source === "local";
+		const ingredientName = escapeHTML(row.name);
+		const casNumber = escapeHTML(row.cas || "N/A");
+		const einecsNumber = escapeHTML(row.einecs || "N/A");
+	
+		if (isLocal) {
+			return `
+				<a class="popup-link listIngName listIngName-with-separator" href="/pages/mgmIngredient.php?id=${row.id}">
+					${ingredientName}
+				</a>
+				${allergenIndicator}
+				${errorIndicator}
+				<span class="listIngHeaderSub">
+					CAS: <i class="pv_point_gen subHeaderCAS" rel="tip" title="Click to copy CAS" id="copyCAS" data-name="${casNumber}">${casNumber}</i> 
+					| EINECS: <i class="pv_point_gen subHeaderCAS">${einecsNumber}</i>
+				</span>`;
+		} else {
+			return `
+				<a class="listIngName listIngName-with-separator" href="#">
+					${ingredientName}
+				</a>
+				${allergenIndicator}
+				<span class="listIngHeaderSub">
+					CAS: <i class="pv_point_gen subHeaderCAS" rel="tip" title="Click to copy CAS" id="copyCAS" data-name="${casNumber}">${casNumber}</i> 
+					| EINECS: <i class="pv_point_gen subHeaderCAS">${einecsNumber}</i>
+				</span>`;
+		}
+	};
+	
+	function iProfile(data, type, row, meta){
+		if(meta.settings.json.source == 'local'){
+			if(row.profile){
+				return '<img src="/img/Pyramid/Pyramid_Slice_'+row.profile+'.png" class="img_ing_prof"/>';    
+			}else{
+				return '<img src="/img/pv_molecule.png" class="img_ing_prof"/>';
+			}
+		}else{
+			return '<i class="pv_point_gen" rel="tip" title="Not available in PV Library">N/A</i>';
+		}
+	};
+	
+	function iStock(data, type, row, meta){
+		if (row.physical_state == 1) {
+			var ingUnit = "ml";
+		}else if (row.physical_state == 2) {
+			var ingUnit = "gr";
+		}
+		if(meta.settings.json.source == 'local'){
+			return '<a class="popup-link" rel="tip" title="'+ingUnit+'" href="/pages/views/ingredients/ingSuppliers.php?id=' + row.id + '&standAlone=1">' + data + '</a>';
+		}else{
+			return '<i class="pv_point_gen" rel="tip" title="Not available in PV Library">N/A</i>';
+		}
+	};
+	
+	function iCategory(data, type, row){
+		if(row.category.image){
+			return '<i rel="tip" title="'+row.category.name+'"><img class="img_ing ing_ico_list" src="'+row.category.image+'" /></i>';    
 		}else{
 			return '<img src="/img/pv_molecule.png" class="img_ing_prof"/>';
 		}
-	}else{
-		return '<i class="pv_point_gen" rel="tip" title="Not available in PV Online">N/A</i>';
-	}
-}
-
-function iStock(data, type, row, meta){
-	if (row.physical_state == 1) {
-		var ingUnit = "ml";
-	}else if (row.physical_state == 2) {
-		var ingUnit = "gr";
-	}
-	if(meta.settings.json.source == 'local'){
-		return '<a class="popup-link" rel="tip" title="'+ingUnit+'" href="/pages/views/ingredients/ingSuppliers.php?id=' + row.id + '&standAlone=1">' + data + '</a>';
-	}else{
-		return '<i class="pv_point_gen" rel="tip" title="Not available in PV Online">N/A</i>';
-	}
-}
-
-function iCategory(data, type, row){
-	if(row.category.image){
-		return '<i rel="tip" title="'+row.category.name+'"><img class="img_ing ing_ico_list" src="'+row.category.image+'" /></i>';    
-	}else{
-		return '<img src="/img/pv_molecule.png" class="img_ing_prof"/>';
-	}
-}
-
-function iLimit(data, type, row){
-	var byPassIFRA = '';
-	if(row.info.byPassIFRA == 1){
-		var byPassIFRA = '<span class="ing_alg"> <i rel="tip" title="IFRA record is bypassed" class="fas fa-exclamation-triangle"></i></span>';	
-	}
+	};
 	
-	if(row.usage.reason == 1){
-		var reason = 'Recommendation';
-	}else if(row.usage.reason == 2){
-		var reason = 'Restriction';
-	}else if(row.usage.reason == 3){
-		var reason = 'Specification';
-	}else if(row.usage.reason == 4){
-		var reason = 'Prohibition';
-	}else{
-		var reason = row.usage.reason;
-	}
-	
-	return '<i class="pv_point_gen pv_gen_li" rel="tip" title="'+reason+'">'+row.usage.limit+'</i>'+byPassIFRA;
-}
-
-function iSuppliers(data, type, row){
-	if(row.supplier){
-	data ='<div class="btn-group"><button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fa fa-store mx-2"></i><span class="badge badge-light">'+row.supplier.length+'</span></button><div class="dropdown-menu dropdown-menu-right">';
-	for (var key in row.supplier) {
-		if (row.supplier.hasOwnProperty(key)) {
-			data+='<li><a class="dropdown-item" target="_blank" href="'+row.supplier[key].link+'"><i class="fa fa-store mx-2"></i>'+row.supplier[key].name+'</a></li>';
+	function iLimit(data, type, row){
+		var byPassIFRA = '';
+		if(row.info.byPassIFRA == 1){
+			var byPassIFRA = '<span class="ing_alg"> <i rel="tip" title="IFRA record is bypassed" class="fas fa-exclamation-triangle"></i></span>';	
 		}
-	}                
-	data+='</div></div></td>';
-}else{
-		data = 'N/A';
-	}
-	return data;
-}
-
-function iDocs(data, type, row){
-	if(row.document){	
-		data ='<div class="btn-group"><button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fa fa-file-alt mx-2"></i><span class="badge badge-light">'+row.document.length+'</span></button><div class="dropdown-menu dropdown-menu-right">';
-		for (var key in row.document) {
-			if (row.document.hasOwnProperty(key)) {
-				data+='<a class="dropdown-item popup-link" href="/pages/viewDoc.php?id='+row.document[key].id+'"><i class="fa fa-file-alt mx-2"></i>'+row.document[key].name+'</a>';
+		
+		if(row.usage.reason == 1){
+			var reason = 'Recommendation';
+		}else if(row.usage.reason == 2){
+			var reason = 'Restriction';
+		}else if(row.usage.reason == 3){
+			var reason = 'Specification';
+		}else if(row.usage.reason == 4){
+			var reason = 'Prohibition';
+		}else{
+			var reason = row.usage.reason;
+		}
+		
+		return '<i class="pv_point_gen pv_gen_li" rel="tip" title="'+reason+'">'+row.usage.limit+'</i>'+byPassIFRA;
+	};
+	
+	function iSuppliers(data, type, row){
+		if(row.supplier){
+		data ='<div class="btn-group"><button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fa fa-store mx-2"></i><span class="badge badge-light">'+row.supplier.length+'</span></button><div class="dropdown-menu dropdown-menu-right">';
+		for (var key in row.supplier) {
+			if (row.supplier.hasOwnProperty(key)) {
+				data+='<li><a class="dropdown-item" target="_blank" href="'+row.supplier[key].link+'"><i class="fa fa-store mx-2"></i>'+row.supplier[key].name+'</a></li>';
 			}
 		}                
 		data+='</div></div></td>';
-	
-		}else{
+	}else{
 			data = 'N/A';
 		}
+		return data;
+	};
 	
-	return data;
-}
-
-
-function actions(data, type, row, meta){
-	if(meta.settings.json.source == 'PVOnline'){
-		data = '<div class="dropdown">' +
-			'<button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fas fa-ellipsis-v"></i></button>' +
-				'<ul class="dropdown-menu dropdown-menu-right">' + 
-				'<li><a rel="tip" title="Import '+ row.name +'" class="pv_point_gen text-dark" id="impIng" data-name="'+ row.name +'" data-id='+ row.id +'><i class="fas fa-download mx-2"></i>Import to local DB</a></li>'; 
-		data += '</ul></div>';		
-	}else{//Treat the rest as local
-		data = '<div class="dropdown">' +
-			'<button type="button" class="btn btn-primary btn-floating dropdown-toggle hidden-arrow" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fas fa-ellipsis-v"></i></button>' +
-				'<ul class="dropdown-menu dropdown-menu-right">';
-		data += '<li><a href="/pages/mgmIngredient.php?id='+btoa(row.name)+'" class="dropdown-item popup-link"><i class="fas fa-edit mx-2"></i>Manage</a></li>';
+	function iDocs(data, type, row){
+		if(row.document){	
+			data ='<div class="btn-group"><button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fa fa-file-alt mx-2"></i><span class="badge badge-light">'+row.document.length+'</span></button><div class="dropdown-menu dropdown-menu-right">';
+			for (var key in row.document) {
+				if (row.document.hasOwnProperty(key)) {
+					data+='<a class="dropdown-item popup-link" href="/pages/viewDoc.php?id='+row.document[key].id+'"><i class="fa fa-file-alt mx-2"></i>'+row.document[key].name+'</a>';
+				}
+			}                
+			data+='</div></div></td>';
 		
-		data += '<li><a class="dropdown-item" href="/pages/export.php?format=json&kind=single-ingredient&id=' + row.id + '" rel="tip" title="Export '+ row.name +' as JSON" ><i class="fas fa-download mx-2"></i>Export as JSON</a></li>';
-
-		data += '<div class="dropdown-divider"></div>';
-
-		data += '<li><a rel="tip" title="Remove '+ row.name +'" class="dropdown-item pv_point_gen text-danger" id="rmIng" data-name="'+ row.name +'" data-id='+ row.id +'><i class="fas fa-trash mx-2"></i>Delete</a></li>'; 
-		data += '</ul></div>';		
-	}
+			}else{
+				data = 'N/A';
+			}
+		
+		return data;
+	};
 	
-	return data;
-}
-
-
-$('#tdDataIng').on('click', '[id*=cCAS]', function () {
-	var copy = {};
-	copy.Name = $(this).attr('data-name');
-	const el = document.createElement('textarea');
-    el.value = copy.Name;
-    document.body.appendChild(el);
-    el.select();
-    document.execCommand('copy');
-    document.body.removeChild(el);
-});
-
-
-
-$('#tdDataIng').on('click', '[id*=impIng]', function () {
-	var ing = {};
-	ing.ID = $(this).attr('data-id');
-	ing.Name = $(this).attr('data-name');
-    
-	bootbox.dialog({
-       title: "Confirm ingredient import",
-       message : 'Import <strong>'+ ing.Name +'</strong>\'s data from PVOnline? <hr/><div class="alert alert-warning"><strong>Please note: data maybe incorrect and/or incomplete, you should validate them after import.</strong></div>',
-       buttons :{
-           main: {
-               label : "Import",
-               className : "btn-warning",
-               callback: function (){
-	    			
-				$.ajax({
-					url: '/pages/update_data.php', 
-					type: 'POST',
-					data: {
-						action: "import",
-						source: "PVOnline",
-						kind: "ingredient",
-						ing_id: ing.ID,
-						},
-					dataType: 'json',
-					success: function (data) {
-						if ( data.success ) {
-							$('#toast-title').html('<i class="fa-solid fa-circle-check mr-2"></i>' + data.success);
-							$('.toast-header').removeClass().addClass('toast-header alert-success');
-						} else {
-							$('#toast-title').html('<i class="fa-solid fa-circle-exclamation mr-2"></i>' + data.error);
-							$('.toast-header').removeClass().addClass('toast-header alert-danger');
-						}
-						$('.toast').toast('show');
-					}
-				});
-				
-                 return true;
-               }
-           },
-           cancel: {
-               label : "Cancel",
-               className : "btn-secondary",
-               callback : function() {
-                   return true;
-               }
-           }   
-       },onEscape: function () {return true;}
-   });
-});
-
-
-$('#tdDataIng').on('click', '[id*=rmIng]', function () {
-	var ing = {};
-	ing.ID = $(this).attr('data-id');
-	ing.Name = $(this).attr('data-name');
-    
-	bootbox.dialog({
-       title: "Confirm ingredient deletion",
-       message : 'Permanently delete <strong>'+ ing.Name +'</strong> and its data?',
-       buttons :{
-           main: {
-               label : "Delete",
-               className : "btn-danger",
-               callback: function (){
-	    			
-				$.ajax({
-					url: '/pages/update_data.php', 
-					type: 'POST',
-					data: {
-						ingredient: "delete",
-						ing_id: ing.ID,
-						},
-					dataType: 'json',
-					success: function (data) {
-						if ( data.success ) {
-							$('#toast-title').html('<i class="fa-solid fa-circle-check mr-2"></i>' + data.success);
-							$('.toast-header').removeClass().addClass('toast-header alert-success');
-							reload_ingredients_data();
-						} else {
-							$('#toast-title').html('<i class="fa-solid fa-circle-exclamation mr-2"></i>' + data.error);
-							$('.toast-header').removeClass().addClass('toast-header alert-danger');
-						}
-						$('.toast').toast('show');
-					}
-				});
-				
-                 return true;
-               }
-           },
-           cancel: {
-               label : "Cancel",
-               className : "btn-secondary",
-               callback : function() {
-                   return true;
-               }
-           }   
-       },onEscape: function () {return true;}
-   });
-});
-
-function reload_ingredients_data() {
-    $('#tdDataIng').DataTable().ajax.reload(null, true);
-}
-
-$(".input-group-btn .dropdown-menu li a").click(function () {
-	var selText = $(this).html();
-	var provider = $(this).attr('data-provider');
-	  
-	$(this).parents(".input-group-btn").find(".btn-search").html(selText);
-	$(this).parents(".input-group-btn").find(".btn-search").attr('data-provider',provider);
 	
-	$('#pv_search_btn').click();
-	if($('#pv_search_btn').data().provider == 'local'){
-		$("#advanced_search").html('<span><hr /><a href="#" class="advanced_search_box" data-bs-toggle="modal" data-bs-target="#adv_search">Advanced Search</a></span>');
-	}else{
-		$("#advanced_search").html('');
-	}
+	function actions(data, type, row, meta){
+		if(meta.settings.json.source == 'PVLibrary'){
+			data = '<div class="dropdown">' +
+				'<button type="button" class="btn" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fas fa-ellipsis-v"></i></button>' +
+					'<ul class="dropdown-menu dropdown-menu-right">' + 
+					'<li><a rel="tip" title="Import '+ row.name +'" class="pv_point_gen" id="impIng" data-name="'+ row.name +'" data-id='+ row.id +'><i class="fas fa-download mx-2"></i>Import to local DB</a></li>'; 
+			data += '</ul></div>';		
+		}else{//Treat the rest as local
+			data = '<div class="dropdown">' +
+				'<button type="button" class="btn btn-floating hidden-arrow" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fas fa-ellipsis-v"></i></button>' +
+					'<ul class="dropdown-menu dropdown-menu-right">';
+			data += '<li><a href="/pages/mgmIngredient.php?id=' + row.id + '" class="dropdown-item popup-link"><i class="fas fa-edit mx-2"></i>Manage</a></li>';
+			
+			data += '<li><a class="dropdown-item" href="/pages/export.php?format=json&kind=single-ingredient&id=' + row.id + '" rel="tip" title="Export '+ row.name +' as JSON" ><i class="fas fa-download mx-2"></i>Export as JSON</a></li>';
 	
-});
-
-function extrasShow() {
-	$('[rel=tip]').tooltip({
-        "html": true,
-        "delay": {"show": 100, "hide": 0},
-     });
-	$('.popup-link').magnificPopup({
-		type: 'iframe',
-		closeOnContentClick: false,
-		closeOnBgClick: false,
-		showCloseBtn: true,
+			data += '<div class="dropdown-divider"></div>';
+	
+			data += '<li><a rel="tip" title="Remove '+ row.name +'" class="dropdown-item pv_point_gen text-danger" id="rmIng" data-name="'+ row.name +'" data-id='+ row.id +'><i class="fas fa-trash mx-2"></i>Delete</a></li>'; 
+			data += '</ul></div>';		
+		}
+		
+		return data;
+	};
+	
+	
+	$('#tdDataIng').on('click', '[id*=copyCAS]', function () {
+		const casNumber = $(this).attr('data-name'); // Retrieve the CAS number
+	
+		if (!casNumber) {
+			console.warn("No CAS number found for copying.");
+			return;
+		}
+	
+		// Create a temporary textarea to hold the CAS number
+		const tempTextarea = document.createElement('textarea');
+		tempTextarea.value = casNumber;
+		tempTextarea.style.position = 'absolute';
+		tempTextarea.style.left = '-9999px'; // Position off-screen to avoid UI disruption
+	
+		document.body.appendChild(tempTextarea); // Append to the DOM
+		tempTextarea.select(); // Select the content
+	
+		try {
+			// Execute the copy command
+			const successful = document.execCommand('copy');
+			if (successful) {
+				// Show Bootstrap tooltip
+				const $element = $(this);
+				$element.attr('data-bs-original-title', 'Copied!'); // Set tooltip text
+				const tooltip = bootstrap.Tooltip.getInstance($element[0]) || new bootstrap.Tooltip($element[0]);
+				tooltip.show();
+	
+				// Hide tooltip after 4 seconds
+				setTimeout(() => {
+					tooltip.hide();
+					$element.removeAttr('data-bs-original-title'); // Clear tooltip to reset for future use
+				}, 4000);
+			} else {
+				console.warn("Copy command was unsuccessful.");
+			}
+		} catch (err) {
+			console.error("Error copying CAS number:", err);
+		}
+	
+		document.body.removeChild(tempTextarea); // Remove the temporary element
 	});
-};
 
-
-$('#wipe_all_ing').click(function() {
-    
-	bootbox.dialog({
-       title: "Confirm ingredient wipe",
-       message : 'This will remove ALL your ingredients from the database.\nThis cannot be reverted so please make sure you have taken a backup first.',
-       buttons :{
-           main: {
-               label : "DELETE ALL",
-               className : "btn-danger",
-               callback: function (){
-	    			
-				$.ajax({
-					url: '/pages/update_data.php', 
-					type: 'POST',
-					data: {
-						ingredient_wipe: "true",
+	
+	$('#tdDataIng').on('click', '[id*=impIng]', function () {
+		var ing = {};
+		ing.ID = $(this).attr('data-id');
+		ing.Name = $(this).attr('data-name');
+		
+		bootbox.dialog({
+		   title: "Confirm ingredient import",
+		   message : 'Import <strong>'+ ing.Name +'</strong>\'s data from PVLibrary? <hr/><div class="alert alert-warning"><strong>Please note: data maybe incorrect and/or incomplete, you should validate them after import.</strong></div>',
+		   buttons :{
+			   main: {
+				   label : "Import",
+				   className : "btn-warning",
+				   callback: function (){
+						
+					$.ajax({
+						url: '/core/core.php', 
+						type: 'POST',
+						data: {
+							action: "import",
+							source: "PVLibrary",
+							kind: "ingredient",
+							ing_id: ing.ID,
 						},
-					dataType: 'json',
-					success: function (data) {
-						if ( data.success ) {
-							$('#toast-title').html('<i class="fa-solid fa-circle-check mr-2"></i>' + data.success);
-							$('.toast-header').removeClass().addClass('toast-header alert-success');
-						} else {
-							$('#toast-title').html('<i class="fa-solid fa-circle-exclamation mr-2"></i>' + data.error);
+						dataType: 'json',
+						success: function (data) {
+							if ( data.success ) {
+								$('#toast-title').html('<i class="fa-solid fa-circle-check mr-2"></i>' + data.success);
+								$('.toast-header').removeClass().addClass('toast-header alert-success');
+							} else {
+								$('#toast-title').html('<i class="fa-solid fa-circle-exclamation mr-2"></i>' + data.error);
+								$('.toast-header').removeClass().addClass('toast-header alert-danger');
+							}
+							$('.toast').toast('show');
+						},
+						error: function (xhr, status, error) {
+							$('#toast-title').html('<i class="fa-solid fa-circle-exclamation mx-2"></i> An ' + status + ' occurred, check server logs for more info. '+ error);
 							$('.toast-header').removeClass().addClass('toast-header alert-danger');
+							$('.toast').toast('show');
 						}
-						$('.toast').toast('show');
-					}
-				});
-				
-                 return true;
-               }
-           },
-           cancel: {
-               label : "Cancel",
-               className : "btn-secondary",
-               callback : function() {
-                   return true;
-               }
-           }   
-       },onEscape: function () {return true;}
-   });
+					});
+					
+					 return true;
+				   }
+			   },
+			   cancel: {
+				   label : "Cancel",
+				   className : "btn-secondary",
+				   callback : function() {
+					   return true;
+				   }
+			   }   
+		   },onEscape: function () {return true;}
+	   });
+	});
+	
+	
+	$('#tdDataIng').on('click', '[id*=rmIng]', function () {
+		var ing = {};
+		ing.ID = $(this).attr('data-id');
+		ing.Name = $(this).attr('data-name');
+		
+		bootbox.dialog({
+		   title: "Confirm ingredient deletion",
+		   message : '<div class="alert alert-warning"><i class="fa-solid fa-triangle-exclamation mx-2"></i>WARNING, this action cannot be reverted.</div><p>Permantly delete <strong>'+ ing.Name +'</strong> and its data?</p>' +
+		   '<div class="form-group col-sm">' + 
+			'<input name="forceDelIng" id="forceDelIng" type="checkbox" value="1">'+
+			'<label class="form-check-label mx-2" for="forceDelIng">Force delete ingredient in use</label>'+
+		   '</div>',
+		   buttons :{
+			   main: {
+				   label : "Delete",
+				   className : "btn-danger",
+				   callback: function (){
+						
+					$.ajax({
+						url: '/core/core.php', 
+						type: 'POST',
+						data: {
+							ingredient: "delete",
+							ing_id: ing.ID,
+							forceDelIng: $("#forceDelIng").is(':checked')
+						},
+						dataType: 'json',
+						success: function (data) {
+							if ( data.success ) {
+								$('#toast-title').html('<i class="fa-solid fa-circle-check mr-2"></i>' + data.success);
+								$('.toast-header').removeClass().addClass('toast-header alert-success');
+								reload_ingredients_data();
+							} else {
+								$('#toast-title').html('<i class="fa-solid fa-circle-exclamation mr-2"></i>' + data.error);
+								$('.toast-header').removeClass().addClass('toast-header alert-danger');
+							}
+							$('.toast').toast('show');
+						},
+						error: function (xhr, status, error) {
+							$('#toast-title').html('<i class="fa-solid fa-circle-exclamation mx-2"></i> An ' + status + ' occurred, check server logs for more info. '+ error);
+							$('.toast-header').removeClass().addClass('toast-header alert-danger');
+							$('.toast').toast('show');
+						}
+					});
+					
+					 return true;
+				   }
+			   },
+			   cancel: {
+				   label : "Cancel",
+				   className : "btn-secondary",
+				   callback : function() {
+					   return true;
+				   }
+			   }   
+		   },onEscape: function () {return true;}
+	   });
+	});
+	
+	function reload_ingredients_data() {
+		$('#tdDataIng').DataTable().ajax.reload(null, false);
+	}
+	
+	$(".input-group-btn .dropdown-menu li a").click(function () {
+		var selText = $(this).html();
+		var provider = $(this).attr('data-provider');
+		  
+		$(this).parents(".input-group-btn").find(".btn-search").html(selText);
+		$(this).parents(".input-group-btn").find(".btn-search").attr('data-provider',provider);
+		
+		$('#pv_search_btn').trigger('click');
+		if($('#pv_search_btn').data('provider') === 'local'){
+			$("#advanced_search").html('<span><hr /><a href="#" class="advanced_search_box" data-bs-toggle="modal" data-bs-target="#adv_search">Advanced Search</a></span>');
+		}else{
+			$("#advanced_search").html('');
+			tdDataIng.settings()[0].language.emptyTable = '<div class="alert alert-warning mt-2"><i class="fa-solid fa-triangle-exclamation mx-2"></i><strong>Nothing found, try a different term instead? You can search for ingredient name or CAS number</strong></div>';
+		}
+		
+	});
+	
+	function extrasShow() {
+		$('[rel=tip]').tooltip({
+			"html": true,
+			"delay": {"show": 100, "hide": 0},
+		 });
+		$('.popup-link').magnificPopup({
+			type: 'iframe',
+			closeOnContentClick: false,
+			closeOnBgClick: false,
+			showCloseBtn: true,
+		});
+	};
+	
+	
+	$('#wipe_all_ing').click(function() {
+		
+		bootbox.dialog({
+		   title: "Confirm ingredient wipe",
+		   message : 'This will remove ALL your ingredients from the database.\nThis cannot be reverted so please make sure you have taken a backup first.',
+		   buttons :{
+			   main: {
+				   label : "DELETE ALL",
+				   className : "btn-danger",
+				   callback: function (){
+						
+					$.ajax({
+						url: '/core/core.php', 
+						type: 'POST',
+						data: {
+							ingredient_wipe: "true",
+						},
+						dataType: 'json',
+						success: function (data) {
+							if ( data.success ) {
+								$('#toast-title').html('<i class="fa-solid fa-circle-check mr-2"></i>' + data.success);
+								$('.toast-header').removeClass().addClass('toast-header alert-success');
+							} else {
+								$('#toast-title').html('<i class="fa-solid fa-circle-exclamation mr-2"></i>' + data.error);
+								$('.toast-header').removeClass().addClass('toast-header alert-danger');
+							}
+							$('.toast').toast('show');
+						},
+						error: function (xhr, status, error) {
+							$('#toast-title').html('<i class="fa-solid fa-circle-exclamation mr-2"></i> An ' + status + ' occurred, check server logs for more info. '+ error);
+							$('.toast-header').removeClass().addClass('toast-header alert-danger');
+							$('.toast').toast('show');
+						}
+					});
+					
+					 return true;
+				   }
+			   },
+			   cancel: {
+				   label : "Cancel",
+				   className : "btn-secondary",
+				   callback : function() {
+					   return true;
+				   }
+			   }   
+		   },onEscape: function () {return true;}
+	   });
+	});
 });
 </script>
 <script src="/js/import.ingredients.js"></script>

@@ -33,7 +33,9 @@ foreach ($rs as $rq) {
 	$r['phone'] = (string)$rq['phone']?:'N/A';
 	$r['email'] = (string)$rq['email']?:'N/A';
 	$r['web'] = (string)$rq['web']?:'N/A';
-	
+	$r['created_at'] = (string)$rq['created_at']?:'00:00:00';
+	$r['updated_at'] = (string)$rq['updated_at']?:'00:00:00';
+
 	$rx[]=$r;
 }
 $total = mysqli_fetch_assoc(mysqli_query($conn,"SELECT COUNT(id) AS entries FROM customers"));

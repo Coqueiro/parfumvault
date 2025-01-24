@@ -36,68 +36,95 @@ $(document).ready(function(){
 
 	$("#ingredient").select2({
 		minimumInputLength: 2,
-    	dropdownAutoWidth: true,
-		//containerCssClass : "form-select mb-3",
-        allowClear: true,
-		placeholder: 'Choose ingredient (name, cas)',
+		dropdownAutoWidth: true,
+		allowClear: true,
+		placeholder: '',
 		templateResult: formatIngredients,
 		templateSelection: formatIngredientsSelection,
 		ajax: {
 			url: '/core/list_ingredients_simple.php',
 			dataType: 'json',
 			type: 'POST',
-			quietMillis: 250,
 			delay: 300,
-			data: function (data) {
+			data: function(data) {
 				return {
 					search: data,
 					isDeepQ: isDeep
 				};
 			},
 			processResults: function(data) {
-				if(data.recordsTotal){
+				if (data.recordsTotal) {
 					$(".select2-totalRecords").html('Ingredients found: <strong>' + data.recordsTotal + '</strong>');
-				}else{
+				} else {
 					$(".select2-totalRecords").html('');
 				}
 				return {
-					results: $.map(data.data, function(obj) {
+					results: $.map(data.data, function(ingData) {
 						return {
-							id: obj.id,
-							name: obj.name,
-							IUPAC: obj.IUPAC,
-							cas: obj.cas,
-							ingType: obj.type,
-							description: obj.description,
-							physical_state: obj.physical_state,
-							stock: obj.stock,
-							profile: obj.profile
+							id: ingData.id,
+							name: ingData.name,
+							IUPAC: ingData.IUPAC,
+							cas: ingData.cas,
+							ingType: ingData.type,
+							description: ingData.description,
+							physical_state: ingData.physical_state,
+							stock: ingData.stock,
+							profile: ingData.profile,
+							mUnit: ingData.mUnit
 						}
 					})
 				};
 			},
 			cache: true
 		}
-	  
 	}).on('select2:open', () => {
-		$(".select2-search:not(:has(a))").prepend('<div id="add_new_ing_sel" class="select_add_new_ingredient mb-2"><a class="text-primary fa fa-plus mx-2"></a><a href="/pages/mgmIngredient.php" class="popup-link text-primary add-new-ing-sel">Create new ingredient</a></div>');
-		
-		$(".select2-search:not(:has(i))").append('<div class="select2-totalRecords"></div><div class="select_deep_ingredient"><span><div id="select_search_deep" class="select_search_deep"><i class="pv_point_gen mx-2" rel="tip" data-placement="bottom" title="Extend search in synonyms"><input data-default="true" type="checkbox" id="isDeep"></i><label for="isDeep">Deep Search</label></div></span></div>');
-		
-		$('#isDeep').prop('checked', false);
-		isDeep = false;
-		$(".select2-totalRecords").html('');
-		
-		$('.popover').hide();
-		extrasShow();
-
+		// Delay to ensure the select2 elements have rendered
+		setTimeout(() => {
+			// Check if the content has already been added to prevent duplication
+			if (!$(".select2-search").find("#add_new_ing_sel").length) {
+				$(".select2-search").prepend(`
+					<div id="add_new_ing_sel" class="select_add_new_ingredient mb-2">
+						<a href="/pages/mgmIngredient.php" class="popup-link add-new-ing-sel">
+							<i class="fa fa-plus mx-2"></i>Create new ingredient
+						</a>
+					</div>
+				`);
+			}
+			
+			// Append total records and deep search options if not already present
+			if (!$(".select2-search").find(".select2-totalRecords").length) {
+				$(".select2-search").append(`
+					<div class="select2-totalRecords"></div>
+					<div class="select_deep_ingredient">
+						<span>
+							<div id="select_search_deep" class="select_search_deep">
+								<i class="pv_point_gen mx-2" rel="tip" data-placement="bottom" title="Extend search in synonyms">
+									<input data-default="true" type="checkbox" id="isDeep">
+									<label for="isDeep">Deep Search</label>
+								</i>
+							</div>
+						</span>
+					</div>
+				`);
+			}
+	
+			// Reset the checkbox and clear total records
+			$('#isDeep').prop('checked', false);
+			isDeep = false;
+			$(".select2-totalRecords").html('');
+			$('.popover').hide();
+	
+			extrasShow();
+			
+		}, 100); // Small delay to ensure elements are rendered
 	}).on('select2:selecting', function (e) {
-  		var id = e.params.args.data.id;
-   		var type = e.params.args.data.ingType;
+		var id = e.params.args.data.id;
+		var type = e.params.args.data.ingType;
 		
-	  	$(this).attr('ing-id', id);
-	   	$(this).attr('ing-type', type);
+		$(this).attr('ing-id', id);
+		$(this).attr('ing-type', type);
 	});
+
 	
 
 	
@@ -112,13 +139,8 @@ $(document).ready(function(){
 			return 'No ingredient found...';
 		}
 		
-		var measureIn;
-		if (ingredientData.physical_state == '1'){
-			measureIn = 'mL';
-		}else if (ingredientData.physical_state == '2'){
-			measureIn = 'grams';
-		}
-		
+		let measureIn = ingredientData.mUnit || (ingredientData.physical_state == '1' ? 'mL' : ingredientData.physical_state == '2' ? 'grams' : '');
+
 		var $container = $(
 			"<div class='select_result_igredient clearfix'>" +
 			  "<div class='select_result_igredient_meta'>" +
@@ -152,61 +174,58 @@ $(document).ready(function(){
 	
 	
 	function formatIngredientsSelection (ingredientData) {
+		if (ingredientData.id === '') {
+      		return 'Search ingredients (name, cas)';
+    	}
+
 		return ingredientData.name;
 	}
 	
 	//UPDATE PURITY
-	$('#ingredient').on('select2:selecting', function(e){
+	$('#ingredient').on('select2:selecting', function(e) {
 		var ingType = $(e.currentTarget).attr('ing-type');
 		var ingID = $(e.currentTarget).attr('ing-id');
-		//console.log(e);
-		$.ajax({ 
-			url: '/pages/getIngInfo.php', 
-			type: 'GET',
-			data: {
-				filter: "purity",
-				id: ingID
-				},
-			dataType: 'json',
-			success: function (data) {
-			  if(ingType == 'Solvent'){
-				$("#concentration").prop("disabled", true); 
-				$("#dilutant").prop("disabled", true);
-				$("#concentration").val(100);
-				$("#dilutant").val('None');
-			  }else{
-				$("#concentration").prop("disabled", false);
-				$("#concentration").val(data.purity).trigger("input");;
-			  }
-			 $("#quantity").prop("disabled", false);
-			 $("#quantity").val();
-			}
-		  });
 		
-		$.ajax({ 
-			url: '/pages/getIngInfo.php', 
+		$.ajax({
+			url: '/core/getIngInfo.php',
 			type: 'GET',
 			data: {
-				filter: "solvent",
+				filter: "purity,solvent",
 				id: ingID
-				},
+			},
 			dataType: 'json',
-			success: function (data) {
-			  $('#dilutant').val(data.solvent);
+			success: function(data) {
+				if (ingType === 'Solvent') {
+					$("#concentration").prop("disabled", true).val(100);
+					$("#dilutant").prop("disabled", true).val('none').selectpicker("refresh");
+				} else {
+					$("#concentration").prop("disabled", false).val(data.purity).trigger("input");
+					//$("#dilutant").prop("disabled", false).val(data.solvent).selectpicker("refresh");
+				}
+	
+				$("#quantity").prop("disabled", false);
+			},
+			error: function(xhr, status, error) {
+				console.error('Error fetching ingredient info:', error);
 			}
 		});
-	
 	});
 	
-	$('#concentration').bind('input', function() {
-		var concentration = $('#concentration').val();
-		if(concentration >= 100){
-			$("#dilutant").prop("disabled", true); 
-			$("#dilutant").val('').selectpicker("refresh");
-		}else{
-			$("#dilutant").prop("disabled", false).selectpicker('refresh');
+	$('#concentration').on('input change', function() {
+		const MAX_CONCENTRATION = 100;
+		var concentration = parseFloat($(this).val());
+	
+		if (!isNaN(concentration)) {
+			if (concentration >= MAX_CONCENTRATION) {
+				$("#dilutant").prop("disabled", true).val('none').selectpicker("refresh");
+			} else {
+				$("#dilutant").prop("disabled", false).selectpicker("refresh");
+			}
+		} else {
+			console.warn('Invalid concentration input');
 		}
-		//$('.selectpicker').selectpicker('refresh');
 	});
+
+
 
 });

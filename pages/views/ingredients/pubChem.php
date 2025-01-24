@@ -1,9 +1,11 @@
 <?php
 
 if(!$_GET['cas']){
-	echo 'Error: Missing CAS number';
+	$response["error"] = 'Missing CAS number';
+	echo json_encode($response);
 	return;
 }
+
 define('__ROOT__', dirname(dirname(dirname(dirname(__FILE__))))); 
 
 require_once(__ROOT__.'/inc/sec.php');
@@ -45,68 +47,75 @@ if(empty($data)){
 <script>
 $(document).ready(function(){
   
-$('#pubChemDataJ').on('click', '[id*=btnUpdatePub]', function () {
-	$.ajax({ 
-		url: 'update_data.php', 
-		type: 'POST',
-		data: {
-			pubChemData: 'update',
-			molecularWeight: "<?=$molecularWeight?>",
-			logP: "<?=$logP?>",
-			molecularFormula: "<?=$molecularFormula?>",
-			InChI: "<?=$InChI?>",
-			CanonicalSMILES: "<?=$CanonicalSMILES?>",
-			ExactMass: "<?=$ExactMass?>",
-			cas: "<?=$cas?>",
+	$('#btnUpdatePub').on('click', function () {
+		$.ajax({ 
+			url: '/core/core.php', 
+			type: 'POST',
+			data: {
+				pubChemData: 'update',
+				molecularWeight: "<?=$molecularWeight?>",
+				logP: "<?=$logP?>",
+				molecularFormula: "<?=$molecularFormula?>",
+				InChI: "<?=$InChI?>",
+				CanonicalSMILES: "<?=$CanonicalSMILES?>",
+				ExactMass: "<?=$ExactMass?>",
+				cas: "<?=$cas?>",
 			},
-		dataType: 'html',
-		success: function (data) {
-			$('#ingMsg').html(data);
-			$("#INCI").val("<?=$InChI?>");
-			reload_overview();
-		}
-	  });             
-});
+			dataType: 'JSON',
+			success: function (data) {
+				$('#toast-title').html('<i class="fa-solid fa-circle-check mr-2"></i>' + data.success);
+				$('.toast-header').removeClass().addClass('toast-header alert-success');
+				$("#INCI").val("<?=$InChI?>");
+				reload_overview();
+				$('.toast').toast('show');
+			},
+			error: function (xhr, status, error) {
+				$('#toast-title').html('<i class="fa-solid fa-circle-exclamation mr-2"></i> An ' + status + ' occurred, check server logs for more info. '+ error);
+				$('.toast-header').removeClass().addClass('toast-header alert-danger');
+				$('.toast').toast('show');
+			}
+		  });             
+	});
      
 });
 </script>
 <h3>Pub Chem Data</h3>
-<div class="col dropdown-divider"></div>
-<div class="card rounded" id="pubChemDataJ">
-    <div class="card-body"> 
-        <div class="col-sm-6">
-            <div class="col-sm-5">
-                <img alt="Structure image" src="<?php echo $image;?>"/>
-            </div>
-            <div class="row">
-            	<div class="col">
-                	Molecular Formula: <label><?php echo $molecularFormula;?></label>
-            	</div>
-            </div>
-
-             <div class="row">
-             	<div class="col">
-                	Canonical Smiles: <label><?php echo $CanonicalSMILES;?></label>
-            	</div>
-             </div>
-             <div class="row">
-             	<div class="col">
-                	Mass: <label><?php echo $ExactMass;?></label>
-            	</div>
-             </div>
-             <div class="row">
-             	<div class="col">
-                	XLogP: <label><?php echo $logP;?></label>
-            	</div>
-             </div> 
-             <div class="col dropdown-divider"></div>
-             <div class="row mt-2">
-             	<div class="col">
-                	<input type="submit" class="btn btn-info" name="btnUpdatePub" id="btnUpdatePub" value="Update data" />
-            	</div>
-             </div>                          
-        </div>
+<div class="container">
+  <div class="row">
+    <div class="col-md-2">
+      <img src="<?php echo $image;?>" class="img-fluid d-block" alt="Molecule Image" />
     </div>
+    <div class="col-md-10">
+      <div class="row mb-2">
+        <div class="col-md-2">Molecular Formula</div>
+        <div class="col-md-8"><strong><?php echo $molecularFormula;?></strong></div>
+      </div>
+      <div class="row mb-2">
+        <div class="col-md-2">Molecular Weight</div>
+        <div class="col-md-8"><strong><?php echo $molecularWeight;?></strong></div>
+      </div>
+      <div class="row mb-2">
+        <div class="col-md-2">Canonical Smiles</div>
+        <div class="col-md-8"><strong><?php echo $CanonicalSMILES;?></strong></div>
+      </div>
+      <div class="row mb-2">
+        <div class="col-md-2">Mass</div>
+        <div class="col-md-8"><strong><?php echo $ExactMass;?></strong></div>
+      </div>
+      <div class="row mb-2">
+        <div class="col-md-2">XLogP</div>
+        <div class="col-md-8"><strong><?php echo $logP;?></strong></div>
+      </div>
+      <div class="row">
+        <div class="col-12">
+        	<input class="btn btn-primary mx-2" name="btnUpdatePub" id="btnUpdatePub" value="Update data" />
+	    	<a href="https://pubchem.ncbi.nlm.nih.gov/#query=<?=$cas?>" target="_blank">
+    			<button class="btn btn-warning" name="btnViewPub" id="btnViewPub">
+        			View in PubChem <i class="fa-solid fa-arrow-up-right-from-square"></i>
+    			</button>
+			</a>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
-
-

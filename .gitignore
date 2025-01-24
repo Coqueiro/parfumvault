@@ -17,3 +17,5 @@ modules/suppliers/pvOnlineBK.php
 spreadsheet_credentials.json
 db_credentials.json
 gemini_credentials.json
+modules/suppliers/pvLibraryBK.json
+modules/suppliers/pvLibraryBK.php

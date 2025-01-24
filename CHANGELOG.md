@@ -1,4 +1,359 @@
 # CHANGELOG
+### Version 12.4
+- Add dilutant in API formulas
+- API has been extended to provide IFRA library data
+- Rewritten the core upgrade process
+- Added update log history
+- Renamed Measurement Unit to Purchase Unit for ingredients supplier for better clarity
+- Restructure Index.php
+- Update empty table for cart
+- Update actions menu for cart
+- Update ingredients datatable empty table function
+- Various security updates across the app and user access management
+- Better error handling for datatables
+- Improve formula revisions
+- Remove formulas export menu if no formulas
+- Import formulas from a text
+- Improve docker startup
+
+### Version 12.3
+- Fix API log file
+- PV Online has been renamed to PV Library
+
+### Version 12.2
+- Docker file update
+- Fixed document upload for ingredients returning incorrect results
+- Update login method
+- Fix API formula failing to return formulas
+- Added formulas upload via the API
+- Prevent user profile update if managed externally
+- API now allows upload for formulas, ingredients
+- User password is now using a stronger encryption algorithm
+- Forgot password modal update for BS5
+- Forgot password wording update
+- Check if user password is already encrypted when env user variables provided, encrypt if not
+- Added a stress test script to crate dummy formulas
+- Added available API calls endpoint table
+
+### Version 12.1
+- Added summary of total amount required for pending materials
+- Added list of materials per supplier
+- Added kubernetes manifest for emphemeral db storage
+- Renamed openshift folder to k8s
+- Added create and update timestamps
+- Added user_id to enable multi-user access (FOR SAAS ONLY)
+- Update install page
+- Fix Manage link in ingredients actions
+- Make sure tmp file is created before try to generate a PDF for ingredient
+- Wording update
+- Code clean-up
+- Formula notes summary re-write
+- Added an error message next to misconfigured ingredients 
+- Include supplier data when duplicating an ingredient
+- Added enviroment variables for user creation
+- Added enviroment variable to disable updates
+- Improve overall sys upgrade
+- Make sure it retrieves the write tag when upgrading from github
+
+### Version 12.0
+- Lids inventory dropped to accessories
+- Minor overall UI updates
+- Migrating backend scripts under a common backend api
+- Import json functions update
+- Added import for accessories
+- Added import for bottles
+- Added import for suppliers
+- Added import for customers
+- Droped old CSV export for suppliers
+- Fixed pagination for suppliers
+- Formula scaling improvements
+- Added ingredient to formula backend update
+- Fix invalid formula update date on empty formulas
+- Update empty table message
+- Rename sex to gender
+- Error handling improvements
+- Date Format update
+- Auto update image for formulas when uploaded
+- Auto update text title and description after a succesfull update for a formula
+- File upload improvements
+- Various wording updates
+- Removed user alert to reload formula settings pages when making a changes
+- Added openshift yaml manifests
+- Improve db connect method
+- Added a dedicated page to display in case of fatal error
+- Added a session timeout to automatically logoff the user after 30 minutes of inactivity - configurable by user
+- Change selected material color to yellow in formula making for better descrimination
+- Various minor updates and code clean-up
+- Added a function to convert session time to hours/mins
+
+### Version 11.9
+- Added system logs access via the UI for docker/cloud installations - this comes disabled by default
+- Hide properties column in formulas
+- Fix a bug preventing formula categories to be shown properly
+- Set default avantar to user ico
+- Cosmetic UI updates
+- Update empty message for ingredients
+- Prevent deletion of the last left supplier in an ingredient
+- Prevent adding an ingredient with incomplete supplier data to a formula
+- New dashboard update, including better and  cleaner view
+- Set compounds id to integer for exported ingredients
+- Validate if suppliers price is 0 when importing ingredients from a JSON
+
+### Version 11.8
+- Error handling for Formula Make page
+- Readme file update
+- Return 100 in purity if no data by default 
+- Increase quantity storage for formulas
+- Update formulas status badges
+- Update ingredient advanced search filter
+- Improve lids and bottles add/edit/update
+- Prevent prices to be set to 0
+- Prevent Finished product generation if no or invalid prices or supplier info is detected
+- User registration and login error handling improvements
+- System installation error handling improvements
+
+### Version 11.7
+- Formulation: Make sure dilutant is disabled if material is at 100%
+- Formulation: Auto remove/add decimal point in quantity depending user's input
+- Formulation: Added formula obscure when in a locked state
+- Settings: Show/hide api key
+- Formula settings page minor updates
+- Add IFRA Categories explanation in usage page
+- Make sure empty formula returns array for meta data
+- Set scroll collapse for datatbales in ingredients to false
+
+### Version 11.5
+- Fix revisions comparison
+- Update logout script
+- Check if session already started for user session
+- Improved filtering for advanced search in ingredients
+- UI updates for ingredients
+- Improve PV Online search
+- Refactor local ingredients module
+- Refactor PV-Online ingredients search
+
+### Version 11.4
+- Add shelf life for ingredients
+- Add temprature measurement unit
+- Add solubility options instead of a free text for ingredients
+- Cleaner and better view for formula comparison
+- Minor UI updates
+
+### Version 11.3
+- Minor UI updates
+- Fix merge ingredient returning incorrect value when nothing found
+- Fix placeholder for ingredient selection in formula
+- Added force delete for ingredients in use
+- A new updated IFRA document added
+- IFRA document will show the maximum limit per all categories for 100% concentration
+- IFRA document will be generated regardless if final product is off ifra limits
+- Fixed currency symbol for finished product
+- Ingredient UI update
+- Formula UI and backend update
+- Structure update
+- UI update for IFRA Library
+- Refactor JSON import for IFRALibrary
+- Increase filter box size
+- Extended search to the product name for Batches
+- Added delete option for Batches even if the pdf is missing
+- Batches backend rewrite
+
+### Version 11.2
+- Refactor of backend
+- Fix author name not display properly in the contact form in Marketplace
+- IFRA library categories changed to FLOAT
+- Added pdf and csv export for formula analysis
+- If now numeric value found when IFRA library is looked-up in formula analysis, will return 'No value'
+- Fixed an issue preventing formula analysis to show the max allowed value from the IFRA library
+- Increase page size for formula analysis
+- Add full usage tab for formula per IFRA category
+- Ignore non-numeric values in IFRA library when calculating max usage
+
+### Version 11.1
+- When an ingredient is excluded from formula calculation will also be excluded from any IFRA validations
+- Add a warning in a formula when the ingredient has ifra by passed
+- Fix IFRA by pass in formulas
+- Fix progress bar in formula view not showing properly
+- Added currency list
+- Set default currency to GBP
+- Directory restructure - WIP
+- Fix DeepSearch function not properly showing
+- Change ingredient manage to id instead of a name
+- Added a link to the full ingredient data in MakeFormula
+- Removed row zoom for MakeFormula
+- Bootbox 6.0 update
+- Added deletion for batches
+- Error handling for ingredient management
+- PDF doc generation is now GA for ingredients
+- Make formula improvements
+- Bootstrap update to 5.3.3
+- jquery update to 3.7.1
+- Improved error handling when generating a batch document and archiving a formula
+- Blocked auto update for versions before 10.x
+- Fix formula archiving when deleting a formula
+- Fix auto pdf generation when a formula is marked as complete
+
+### Version 11.0
+- Making SDS GA
+- Added maximum allowed usage for a formula
+- Changed datatype for PubChem to json
+- Added a button to view ingredient data in PubChem
+- Fix PubChemData update button
+- Added more error handling for ajax requests
+- Added a var (pvSearch) to search ingredients in the local datatabase
+- Changed the way the ingredient is handled when exists in a formula but not in the database. Instead of auto creating it when clicked, it presents options to create it, search in PV Online or import via JSON
+- Added editability in IFRA Library
+- Fix a bug preventing adding new ingredients
+- Treat empty IFRA Library values (PROHIBITION, SPECIFICATION) as 0% allowed
+- IFRA structure images import improvements
+
+### Version 10.9
+- Sys update check improvements
+- Dashboard page updates
+- Set datatable entries to the middle
+- Sell formula PDF export updates
+- Fix a bug causing json import for ingredients to fail
+- Include EINECS when adding ingredient entry from compositions
+- Compostion page updates and improvements
+- Hide privacy tab for ingredients as is not yet utilised
+- Tech data page updates
+- Update synonyms backend to json format
+- If Prohibition is selected in ingredient usage and limits then the usage values set to 0
+- Rewrite backend for usage and limits update
+- To Declare option is now moved under Udage and Limits section for ingredients
+- Fix materials not updating corrrectly when added in the cart
+- Added CSV export for cart ingredients
+- Added a toast message for the cart actions
+- Added a toast message when adding an ingredient to the cart in Make Formula
+- CSS clean-up
+
+### Version 10.8
+- Fix API key update not returning error in correct format
+- Rewrite API page
+- Rewrite About page
+- Try to get measurement unit from ingredient supplier first for ingredient search in formulation
+- Table border removed from tables
+- Added support for a dark theme
+- Complete rewrite for Finished Product page
+- Various minor improvements for Formula view
+- Rewrite Sell Formula for BS5
+- Added a font size when exporting a PDF in Sell Formula
+- Added brand logo when exporting a PDF in Sell Formula
+- Added opacity for watermak in Sell Formula page
+- Replaced PDF export in Sell Formula with the native DataTables function
+- Removed the space from ml2L function when appending the measurement unit
+- Default PV Logo update
+- Refactor of validateFormula() function
+- Renamed clone formula to duplicate
+
+### Version 10.7
+- Removed ingredient purity and dilutant from Finished Product page for cleaner view
+- Moved IFRA doc to a modal window
+- Added a print button for the generated IFRA Doc
+- Fix IFRA Document failing to be generated
+- Formula Make page refactor
+- Lids page minor update
+- Added a pending materials page to list all pending materials and their quantity required for the pending formulas
+- todo.php has been renamed to scheduledFormulas.php
+- Add suppliers in pending formulas backend
+- Choose which supplier you updating the stock when making a formula
+- Show available stock from all the available suppliers when making a formula, instead of the preferred one only
+
+### Version 10.6
+- Ingredient Where Used page minor improvements
+- Ingredient Usage & Limits page minor improvements
+- Respect classification type from the IFRA Library
+- Major refactor in formula limits presentation
+- Removed a. element properties from banned/prohibited materials
+- Updated red color for banned/prohibited materials
+- Added banned/prohibited materials in the formula legend
+- Move styling to its own file for MakeFormula page
+- Minor cosmetic updates in the compounds page
+- Discord invite update
+
+### Version 10.5
+- Modify json export for ingredients to include min and max compostion percentage
+- Rewrite multi dimensional function
+- Added min and max percentage for compositions
+- Added formula analysis to breakdown sub-materials and percentages
+- Added IFRA limit in composition if found in library
+- Fix incorrect integer format for compos json
+- Remove ing filter when update data for compositions
+- SDS in ingredient has been renamed to a Document
+- Added synonyms in document generation for ingredients
+- Minor improvements when no ingredients or formulas in the database
+- Edit customer form update to BS5
+- Introduse SDS creation (PREVIEW)
+- Formula comparison minor updates
+- Auto create ingredient when importing a formula from Marketplace if not exists locally 
+- Added toast type messages for ingredient managment
+- Minor UI updates for ingredient management
+
+### Version 10.4
+- Hide skipped materials when making a formula
+- Auto create main formula if not exists when you import a formula to make data
+
+### Version 10.3
+- Added JSON import for Making Formulas
+- Added JSON export for all and specific formulas in making
+- Layout update when adding suppliers for ingredients
+- Added JSON import for formula categories
+- Rewrite of categories import to improve ingredients and formula categories import
+- Code clean up
+- Improvements for SDS generation
+- Auto fetch contact data from branding details for SDS
+- Formula JSON upload form minor fixes
+- Added JSON file import for ingredient categories
+- Ingredient Safety Info update
+- Formula view table element for description and image re-written to div
+- Fix a font for the message returned when error occured during price get request from a supplier 
+- Further improvements in SDS generation
+
+### Version 10.2
+- Minor improvements in finished product page
+- Auto populate CAS and EC if entry exists as an ingredient when adding components in ingredient composition
+- Extend simple search for ingredients to EC numbers
+- Highlight corresponded ingredient that matches a compound name or CAS number in a formula
+- Added GHS Classification for ingredient compounds
+- Fix suppliers and compounds count when exporting ingredients to JSON
+- Replace table with div for compositions page
+- Update perfume types and httml templates page layout
+- Make sure the modal box toggles when trying to schedule a formula which is already scheduled
+- Fix user menu position
+- Added JSON export for formula making
+- Table allergens has been renamed to ingredient_compounds
+
+### Version 10.1
+- Added export to JSON for perfume types
+- Added export to JSON for categories
+- Added Discord server link to the footer
+- Added Bootstrap-Icons
+- Expand ingredient compositions (if any) when formulating
+- Filter illegal chars in ingredient search
+- Added orientation when exporting to a formula for selling
+- Allow ordering in formula sell table
+- Set custom decimal precission when generating a formula to sell
+- Fix export functions in Formula Make page
+
+### Version 10.0
+- Discord server link added
+- Added archive option when deleting a formula
+- Added JSON export for customers
+- Added inventory create/update info for customers
+- Customers messages changed to toast
+- Added JSON export for lids
+- Added inventory create/update info for compounds
+- Added JSON import/export for compounds
+- Allow a formula to be marked complete when contains skipped materials
+- Bottle edit page format update
+- Weight added for the bottles inventory
+- Bottles inventory messages changed to toast
+- Added Inventory for finished Compounds
+- Added document size and created date in fotmula attachements page
+- Fix search when replacing a material
+- PV Scale integration - WIP
+- Log ingredient id in history
+
 ### Version 9.9
 - Record replaced ingredients when finalising a formula in the generated PDF
 - Increase toast duration for formula making to 10 seconds

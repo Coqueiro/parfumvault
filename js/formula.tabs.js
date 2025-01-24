@@ -9,6 +9,14 @@ $(document).ready(function() {
 		reset_solv();
 	});
 	
+	$('#analysis_tab').on( 'click', function () {
+		fetch_analysis();
+	});
+
+	$('#usage_tab').on( 'click', function () {
+		fetch_usage();
+	});
+		
 	$('#impact_tab').on( 'click', function () {
 		fetch_impact();
 	});

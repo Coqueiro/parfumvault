@@ -5,16 +5,34 @@ require_once(__ROOT__.'/inc/sec.php');
 require_once(__ROOT__.'/inc/opendb.php');
 require_once(__ROOT__.'/inc/settings.php');
 
-$row = $_POST['start']?:0;
-$limit = $_POST['length']?:10;
-$order_by  = $_POST['order_by']?:'revisionDate';
-$order  = $_POST['order_as']?:'ASC';
+$row = isset($_POST['start']) ? (int)$_POST['start'] : 0;
+$limit = isset($_POST['length']) ? (int)$_POST['length'] : 10;
+$order_by = isset($_POST['order_by']) ? mysqli_real_escape_string($conn, $_POST['order_by']) : 'revisionDate';
+$order = isset($_POST['order_as']) && in_array(strtoupper($_POST['order_as']), ['ASC', 'DESC']) ? strtoupper($_POST['order_as']) : 'ASC';
+
 $extra = "ORDER BY ".$order_by." ".$order;
 
-$current_rev = mysqli_fetch_array(mysqli_query($conn, "SELECT id,revision FROM formulasMetaData WHERE fid = '".$_GET['fid']."'"));
+$role = (int)$user['role'];
+$userID = (int)$user['id'];
 
 $f = "WHERE fid = '".$_GET['fid']."' GROUP BY revision";
-$q = "SELECT id,name,fid,revision,revisionDate,revisionMethod FROM formulasRevisions $f $extra LIMIT $row, $limit";
+
+
+if ($role === 1) {
+    // Admin: No restrictions
+	$current_rev = mysqli_fetch_array(mysqli_query($conn, "SELECT id,revision FROM formulasMetaData WHERE fid = '".$_GET['fid']."'"));
+	$q = "SELECT id,name,fid,revision,revisionDate,revisionMethod FROM formulasRevisions $f $extra LIMIT $row, $limit";
+} else {
+    // Non-admin: Restrict to their own data
+    $current_rev = mysqli_fetch_array(mysqli_query($conn, "SELECT id,revision FROM formulasMetaData WHERE fid = '".$_GET['fid']."' AND owner_id = '$userID'"));
+    $q = "SELECT id,name,fid,revision,revisionDate,revisionMethod FROM formulasRevisions $f AND owner_id = '$userID' $extra LIMIT $row, $limit";
+}
+
+if(!$current_rev['id']){		
+	$response['error'] = (string)'Requested id is not valid.';    
+	echo json_encode($response);
+	return;
+}
 
 $sql = mysqli_query($conn, $q);
 
@@ -40,14 +58,10 @@ foreach ($revs as $rev) {
 
 	$rx[]=$r;
 }
-$total = mysqli_fetch_assoc(mysqli_query($conn,"SELECT COUNT(id) AS entries FROM formulasRevisions ".$f));
-$filtered = mysqli_fetch_assoc(mysqli_query($conn,"SELECT COUNT(id) AS entries FROM formulasRevisions ".$f));
 
 $response = array(
   "draw" => (int)$_POST['draw'],
   "recordsTotal" => (int)$i,
-  "recordsFiltered" => (int)$i,
-  "debug" => $q,
   "data" => $rx
 );
 

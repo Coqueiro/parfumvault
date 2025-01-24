@@ -1,11 +1,14 @@
-Whats New in v9.9
+Whats New in v12.4
 --------------------------
-- Record replaced ingredients when finalising a formula in the generated PDF
-- Increase toast duration for formula making to 10 seconds
-- Update view for bottle add modal window
-- Choose a replacement material when making a formula and update stock and final documents automatically
-- Skip a mterial when you making a formula
-- Increase update interval check from PV Scale to 5s
-- Added separate notes field for Formula Make
-- When a formula is marked as completed it generates a document in formula attachments
-- For full details please refer to the CHANGELOG
+- API has been extended to provide IFRA library data
+- Rewritten the core upgrade process
+- Renamed Measurement Unit to Purchase Unit for ingredients supplier for better clarity
+- Update empty table for cart
+- Update actions menu for cart
+- Update ingredients datatable empty table function
+- Various security updates across the app and user access management
+- Better error handling for datatables
+- Improve formula revisions
+- Remove formulas export menu if no formulas
+- Import formulas from a text
+- This release may include more changes, for full details please refer to the CHANGELOG

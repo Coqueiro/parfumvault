@@ -5,16 +5,20 @@ require_once(__ROOT__.'/inc/opendb.php');
 require_once(__ROOT__.'/func/profileImg.php');
 
 
-$ingID = mysqli_real_escape_string($conn, base64_decode($_GET["id"]));
-
-
+$ingID = $_GET["id"];
 $res_ingTypes = mysqli_query($conn, "SELECT id,name FROM ingTypes ORDER BY name ASC");
 $res_ingStrength = mysqli_query($conn, "SELECT id,name FROM ingStrength ORDER BY name ASC");
 $res_ingCategory = mysqli_query($conn, "SELECT id,image,name,notes FROM ingCategory ORDER BY name ASC");
 $res_ingProfiles = mysqli_query($conn, "SELECT id,name FROM ingProfiles ORDER BY id ASC");
+$ing = mysqli_fetch_array(mysqli_query($conn, "SELECT * FROM ingredients WHERE id = '$ingID'"));
 
-$ing = mysqli_fetch_array(mysqli_query($conn, "SELECT * FROM ingredients WHERE name = '$ingID'"));
+if($_GET["newIngName"]){
+	$newIngName = mysqli_real_escape_string($conn, base64_decode($_GET["newIngName"]));
 
+	if(empty(mysqli_num_rows(mysqli_query($conn, "SELECT id FROM ingredients WHERE name = '$ingName'")))){
+		$ing['cas'] = mysqli_real_escape_string($conn, $_GET["newIngCAS"]);
+	}
+}
 ?>
 <h3>General</h3>
 <hr>
@@ -24,7 +28,7 @@ $ing = mysqli_fetch_array(mysqli_query($conn, "SELECT * FROM ingredients WHERE n
  <?php if(empty($ingID)){?>
  <div class="mt-3 col-12">
     <label for="name" class="form-label">Name</label>
-    <input name="name" type="text" class="form-control" id="name" />
+    <input name="name" type="text" class="form-control" id="name" value="<?=$newIngName?>">
  </div>
  <?php } ?>
   
@@ -33,27 +37,30 @@ $ing = mysqli_fetch_array(mysqli_query($conn, "SELECT * FROM ingredients WHERE n
     <input name="INCI" type="text" class="form-control" id="INCI" value="<?php echo htmlspecialchars($ing['INCI']); ?>" />
   </div>
   <div class="mt-3 col-md-6">
-    <label for="cas" class="form-label">CAS</label><i class="fa-solid fa-circle-info mx-2 pv_point_gen" rel="tipsy" title="If your material contains multiple CAS, then use Mixture or Blend instead."></i>
+    <label for="cas" class="form-label">CAS</label><i class="fa-solid fa-circle-info mx-2 pv_point_gen" rel="tip" title="If your material contains multiple CAS, then use Mixture or Blend instead."></i>
     <input name="cas" type="text" class="form-control" id="cas" value="<?php echo $ing['cas']; ?>">
     
   </div>
   <div class="mt-3 col-md-6">
     <label for="einecs" class="form-label">EINECS</label>
-    <input name="einecs" type="text" class="form-control" id="einecs" value="<?php echo $ing['einecs']; ?>" />
+    <input name="einecs" type="text" class="form-control" id="einecs" value="<?php echo $ing['einecs']; ?>">
   </div>
   <div class="mt-3 col-md-6">
     <label for="reach" class="form-label">REACH</label>
-    <input name="reach" type="text" class="form-control" id="reach" value="<?php echo $ing['reach']; ?>" />
+    <input name="reach" type="text" class="form-control" id="reach" value="<?php echo $ing['reach']; ?>">
   </div>
 
   <div class="mt-3 col-md-6">
     <label for="fema" class="form-label">FEMA</label>
-    <input name="fema" type="text" class="form-control" id="fema" value="<?php echo $ing['FEMA']; ?>" />
+    <input name="fema" type="text" class="form-control" id="fema" value="<?php echo $ing['FEMA']; ?>">
   </div>
   
   <div class="mt-3 col-md-6">
-    <label for="purity" class="form-label">Purity</label>
-    <input name="purity" type="text" class="form-control" id="purity" value="<?php echo $ing['purity']?: '100'; ?>" />
+     <label for="purity" class="form-label">Purity</label>
+     <div class="input-group">
+    	<input name="purity" type="text" class="form-control" id="purity" value="<?php echo $ing['purity']?: '100'; ?>"  aria-label="purity" aria-describedby="purity-addon">
+        <span class="input-group-text" id="purity-addon">%</span>
+  	</div>
   </div>
   <div class="mt-3 col-md-6">
     <label for="solvent" class="form-label">Solvent</label>
@@ -119,14 +126,10 @@ $ing = mysqli_fetch_array(mysqli_query($conn, "SELECT * FROM ingredients WHERE n
   	<label for="odor" class="form-label">Odor</label>
     <input name="odor" id="odor" type="text" class="form-control" value="<?php echo $ing['odor']; ?>"/>
   </div>
-  <div class="mt-3 col-12">
-      <label class="form-check-label" for="isAllergen" >To Declare</label>
-      <input name="isAllergen" type="checkbox" id="isAllergen" value="1" <?php if($ing['allergen'] == '1'){; ?> checked="checked"  <?php } ?>/><i class="fa-solid fa-circle-info mx-2 pv_point_gen" rel="tipsy" title="If enabled, ingredient name will be printed in the box label."></i>
-  </div>
 
   <div class="mt-3 col-12">
   	<label for="notes" class="form-label">Notes</label>
-    <textarea name="notes" id="notes" cols="45" rows="5" class="form-control"><?php echo $ing['notes']; ?></textarea>
+    <textarea name="notes" id="notes" cols="45" rows="3" class="form-control"><?php echo $ing['notes']; ?></textarea>
   </div>
   <div class="col-sm dropdown-divider"></div>  
   <div class="mt-3 col-12">
@@ -138,23 +141,24 @@ $ing = mysqli_fetch_array(mysqli_query($conn, "SELECT * FROM ingredients WHERE n
         
 <script>
 $(document).ready(function() {
-	$('[rel=tipsy]').tooltip({placement: 'auto'});
+	$('[rel=tip]').tooltip({placement: 'auto'});
 
 	$('#general').on('click', '[id*=saveGeneral]', function () {
 		<?php if(empty($ing['id'])){ ?>
 			if($.trim($("#name").val()) == ''){
-				$('#msg_general').html('<div class="alert alert-danger mx-2"><strong>Error:</strong>Name is required</div>');
+				$('#toast-title').html('<i class="fa-solid fa-circle-exclamation mr-2"></i>Ingredient name is required');
+				$('.toast-header').removeClass().addClass('toast-header alert-danger');
+				$('.toast').toast('show');
 				return;
    			}
 		<?php } ?>
 		$.ajax({ 
-			url: 'update_data.php', 
+			url: '/core/core.php', 
 			type: 'POST',
 			data: {
 				manage: 'ingredient',
 				tab: 'general',
 				ingID: myIngID,
-				
 				name: $("#name").val(),
 				INCI: $("#INCI").val(),
 				cas: $("#cas").val(),
@@ -181,19 +185,25 @@ $(document).ready(function() {
 					$('#mgmIngHeaderCAS').html($("#cas").val());
 					$('#IUPAC').html($("#INCI").val());
 					
-					var msg = '<div class="alert alert-success alert-dismissible"><a href="#" class="close" data-bs-dismiss="alert" aria-label="close">x</a>' + data.success + '</div>';
+					$('#toast-title').html('<i class="fa-solid fa-circle-check mx-2"></i>' + data.success);
+					$('.toast-header').removeClass().addClass('toast-header alert-success');
 				}else{
-					var msg ='<div class="alert alert-danger alert-dismissible"><a href="#" class="close" data-bs-dismiss="alert" aria-label="close">x</a>' + data.error + '</div>';
+					$('#toast-title').html('<i class="fa-solid fa-circle-exclamation mx-2"></i>' + data.error);
+					$('.toast-header').removeClass().addClass('toast-header alert-danger');
 				}
-				
-				$('#msg_general').html(msg);
-				
+				$('.toast').toast('show');
+						
 				if ($('#name').val()) {
-					window.location = 'mgmIngredient.php?id=' + btoa($('#name').val());
+					window.location = '/pages/mgmIngredient.php?id=' + data.ingid;
 				}
 			    <?php if($ing['id']){ ?>
 				reload_overview();
 				<?php } ?>
+			},
+			error: function (xhr, status, error) {
+				$('#toast-title').html('<i class="fa-solid fa-circle-exclamation mx-2"></i> An ' + status + ' occurred, check server logs for more info. '+ error);
+				$('.toast-header').removeClass().addClass('toast-header alert-danger');
+				$('.toast').toast('show');
 			}
 		});
 	});

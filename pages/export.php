@@ -3,9 +3,189 @@ define('__ROOT__', dirname(dirname(__FILE__)));
 
 require_once(__ROOT__.'/inc/sec.php');
 require_once(__ROOT__.'/inc/opendb.php');
-
 require_once(__ROOT__.'/inc/settings.php');
 require_once(__ROOT__.'/inc/product.php');
+
+//EXPORT ACCESSORIES JSON
+if($_GET['format'] == 'json' && $_GET['kind'] == 'accessories'){
+		
+	if(empty(mysqli_num_rows(mysqli_query($conn, "SELECT id FROM inventory_accessories")))){
+		$msg['error'] = 'No accessories found to export';
+		echo json_encode($msg);
+		return;
+	}
+	$count = 0;
+
+	$q = mysqli_query($conn, "SELECT * FROM inventory_accessories");
+	while($res = mysqli_fetch_assoc($q)){
+
+		$r['id'] = (int)$res['id'];
+		$r['name'] = (string)$res['name'];
+		$r['accessory'] = (string)$res['accessory'];
+		$r['price'] = (double)$res['price'];
+		$r['currency'] = (string)$settings['currency'];
+		$r['supplier'] = (string)$res['supplier'];
+		$r['supplier_link'] = (string)$res['supplier_link'];
+		$r['pieces'] = (int)$res['pieces'];
+				
+		$count++;
+		$ic[] = $r;
+
+	}
+	
+	$vd['product'] = $product;
+	$vd['version'] = $ver;
+	$vd['inventory_accessories'] = $count;
+	$vd['timestamp'] = date('d/m/Y H:i:s');
+
+	$result['inventory_accessories'] = $ic;
+	$result['pvMeta'] = $vd;
+
+	header('Content-disposition: attachment; filename=accessories_inventory.json');
+	header('Content-type: application/json');
+	echo json_encode($result, JSON_PRETTY_PRINT);
+	return;	
+
+}
+
+
+//EXPORT BOTTLES JSON
+if($_GET['format'] == 'json' && $_GET['kind'] == 'bottles'){
+		
+	if(empty(mysqli_num_rows(mysqli_query($conn, "SELECT id FROM bottles")))){
+		$msg['error'] = 'No bottles found to export';
+		echo json_encode($msg);
+		return;
+	}
+	$count = 0;
+
+	$q = mysqli_query($conn, "SELECT * FROM bottles");
+	while($res = mysqli_fetch_assoc($q)){
+
+		$r['id'] = (int)$res['id'];
+		$r['name'] = (string)$res['name'];
+		$r['ml'] = (string)$res['ml'];
+		$r['price'] = (double)$res['price'];
+		$r['currency'] = (string)$settings['currency'];
+		$r['height'] = (double)$res['height'];
+		$r['width'] = (double)$res['width'];
+		$r['weight'] = (double)$res['weight'];
+		$r['diameter'] = (double)$res['diameter'];
+		$r['diameter'] = (double)$res['diameter'];
+		$r['supplier'] = (string)$res['supplier'];
+		$r['supplier_link'] = (string)$res['supplier_link'];
+		$r['notes'] = (string)$res['notes'];
+		$r['pieces'] = (int)$res['pieces'];
+		$r['created_at'] = (string)$res['created_at'];
+		$r['updated_at'] = (string)$res['updated_at'];
+		
+		$count++;
+		$ic[] = $r;
+
+	}
+	
+	$vd['product'] = $product;
+	$vd['version'] = $ver;
+	$vd['inventory_bottles'] = $count;
+	$vd['timestamp'] = date('d/m/Y H:i:s');
+
+	$result['inventory_bottles'] = $ic;
+	$result['pvMeta'] = $vd;
+
+	header('Content-disposition: attachment; filename=bottles_inventory.json');
+	header('Content-type: application/json');
+	echo json_encode($result, JSON_PRETTY_PRINT);
+	return;	
+
+}
+
+//EXPORT CUSTOMERS JSON
+if($_GET['format'] == 'json' && $_GET['kind'] == 'customers'){
+		
+	if(empty(mysqli_num_rows(mysqli_query($conn, "SELECT id FROM customers")))){
+		$msg['error'] = 'No customers found to export.';
+		echo json_encode($msg);
+		return;
+	}
+	$count = 0;
+
+	$q = mysqli_query($conn, "SELECT * FROM customers");
+	while($res = mysqli_fetch_assoc($q)){
+
+		$r['id'] = (int)$res['id'];
+		$r['name'] = (string)$res['name'];
+		$r['address'] = (string)$res['address'];
+		$r['email'] = (string)$res['email'];
+		$r['phone'] = (string)$res['phone'];
+		$r['web'] = (string)$res['web'];
+		$r['owner_id'] = (int)$res['owner_id'];
+		$r['created_at'] = (string)$res['created_at'];
+		$r['updated_at'] = (string)$res['updated_at'];
+		
+		$count++;
+		$ic[] = $r;
+
+	}
+	
+	$vd['product'] = $product;
+	$vd['version'] = $ver;
+	$vd['inventory_customers'] = $count;
+	$vd['timestamp'] = date('d/m/Y H:i:s');
+
+	$result['inventory_customers'] = $ic;
+	$result['pvMeta'] = $vd;
+
+	header('Content-disposition: attachment; filename=customers_inventory.json');
+	header('Content-type: application/json');
+	echo json_encode($result, JSON_PRETTY_PRINT);
+	return;	
+
+}
+
+//EXPORT COMPOUNDS JSON
+if($_GET['format'] == 'json' && $_GET['kind'] == 'inventory_compounds'){
+		
+	if(empty(mysqli_num_rows(mysqli_query($conn, "SELECT id FROM inventory_compounds")))){
+		$msg['error'] = 'No compounds found to export.';
+		echo json_encode($msg);
+		return;
+	}
+	$count = 0;
+
+	$q = mysqli_query($conn, "SELECT * FROM inventory_compounds");
+	while($res = mysqli_fetch_assoc($q)){
+
+		$r['id'] = (int)$res['id'];
+		$r['name'] = (string)$res['name'];
+		$r['description'] = (string)$res['description'];
+		$r['batch_id'] = (int)$res['batch_id'];
+		$r['size'] = (string)$res['size'];
+		$r['updated_at'] = (string)$res['updated_at'];
+		$r['created_at'] = (string)$res['created_at'];
+		$r['owner_id'] = (int)$res['owner_id'];
+		$r['location'] = (string)$res['location'];
+		$r['label_info'] = (string)$res['label_info'];
+		
+		$count++;
+		$ic[] = $r;
+
+	}
+	
+	$vd['product'] = $product;
+	$vd['version'] = $ver;
+	$vd['inventory_compounds'] = $count;
+	$vd['timestamp'] = date('d/m/Y H:i:s');
+
+	$result['inventory_compounds'] = $ic;
+	$result['pvMeta'] = $vd;
+
+	header('Content-disposition: attachment; filename=inventory_compounds.json');
+	header('Content-type: application/json');
+	echo json_encode($result, JSON_PRETTY_PRINT);
+	return;	
+
+}
+
 
 //EXPORT INGREDIENTS CSV
 if($_GET['format'] == 'csv' && $_GET['kind'] == 'ingredients'){
@@ -20,7 +200,7 @@ if($_GET['format'] == 'csv' && $_GET['kind'] == 'ingredients'){
 	}
 
 	header('Content-Type: text/csv; charset=utf-8');
-	header('Content-Disposition: attachment; filename='.$_GET['kind'].'.csv');
+	header('Content-Disposition: attachment; filename=inventory_'.$_GET['kind'].'.csv');
 	$output = fopen('php://output', 'w');
 	fputcsv($output, array('Name', 'INCI', 'CAS', 'FEMA', 'Type', 'Strength', 'Profile', 'Physical State', 'Allergen', 'Odor Description', 'Top Note Impact', 'Heart Note Impact', 'Base Note Impact'));
 	
@@ -33,35 +213,6 @@ if($_GET['format'] == 'csv' && $_GET['kind'] == 'ingredients'){
 	return;	
 }
 
-//EXPORT SUPPLIERS CSV
-if($_GET['format'] == 'csv' && $_GET['kind'] == 'suppliers'){
-	$r = mysqli_query($conn, "SELECT id,name,address,po,country,telephone,url,email,platform,price_tag_start,price_tag_end,add_costs,price_per_size,notes,min_ml,min_gr FROM ingSuppliers");
-	
-	$res = array();
-	if (mysqli_num_rows($r) > 0) {
-		while ($row = mysqli_fetch_assoc($r)) {
-			$mt = mysqli_fetch_array(mysqli_query($conn, "SELECT COUNT(id) AS mt FROM suppliers WHERE ingSupplierID = '".$row['id']."'"));
-
-			unset($row['id']);
-			$row['materials'] = $mt['mt'];
-			$res[] = $row;
-			
-		}
-	}
-
-	header('Content-Type: text/csv; charset=utf-8');
-	header('Content-Disposition: attachment; filename='.$_GET['kind'].'.csv');
-	$output = fopen('php://output', 'w');
-	fputcsv($output, array('Name', 'Address', 'PO', 'Country', 'Telephone', 'URL', 'Email', 'Platform', 'Price Tag Start', 'Price Tag End', 'Added Costs', 'Price Per Size', 'Notes', 'Min ml', 'Min gr', 'Materials'));
-	
-	if (count($res) > 0) {
-		foreach ($res as $row) {
-			fputcsv($output, $row);
-		}
-	}
-	
-	return;	
-}
 
 //EXPORT INGREDIENTS JSON
 if($_GET['format'] == 'json' && $_GET['kind'] == 'ingredients'){
@@ -71,8 +222,10 @@ if($_GET['format'] == 'json' && $_GET['kind'] == 'ingredients'){
 		echo json_encode($msg);
 		return;
 	}
-	$ingredients = 0;
+	$ingredients_count = 0;
 	$suppliers_count = 0;
+	$ing_suppliers_count = 0;
+	$ingredient_compounds_count = 0;
 
 	$q = mysqli_query($conn, "SELECT * FROM ingredients");
 	while($res = mysqli_fetch_assoc($q)){
@@ -120,7 +273,7 @@ if($_GET['format'] == 'json' && $_GET['kind'] == 'ingredients'){
 		$r['impact_top'] = (int)$res['impact_top'];
 		$r['impact_heart'] = (int)$res['impact_heart'];
 		$r['impact_base'] = (int)$res['impact_base'];
-		$r['created'] = (string)$res['created'];
+		$r['created_at'] = (string)$res['created_at'];
 		$r['usage_type'] = (string)$res['usage_type'];
 		$r['noUsageLimit'] = (int)$res['noUsageLimit'];
 		$r['byPassIFRA'] = (int)$res['byPassIFRA'];
@@ -128,22 +281,25 @@ if($_GET['format'] == 'json' && $_GET['kind'] == 'ingredients'){
 		$r['molecularWeight'] = (string)$res['molecularWeight'];
 
 		
-		$ingredients++;
+		$ingredients_count++;
 		$ing[] = $r;
 		
 	}
-	$q = mysqli_query($conn, "SELECT * FROM allergens");
+	$q = mysqli_query($conn, "SELECT * FROM ingredient_compounds");
 	while($res = mysqli_fetch_assoc($q)){
 
-		$c['id'] = (string)$res['id'];
+		$c['id'] = (int)$res['id'];
 		$c['ing'] = (string)$res['ing'];
 		$c['name'] = (string)$res['name'];
 		$c['cas'] = (string)$res['cas'] ?: 'N/A';
 		$c['ec'] = (string)$res['ec'] ?: 'N/A';
-		$c['percentage'] = (double)$res['percentage'];
+		$c['min_percentage'] = (double)$res['min_percentage'];
+		$c['max_percentage'] = (double)$res['max_percentage'];
+		$c['GHS'] = (string)$res['GHS'];
 		$c['toDeclare'] = (int)$res['toDeclare'];
-		$c['created'] = (string)$res['created'];
-
+		$c['created_at'] = (string)$res['created_at'];
+		
+		$ingredient_compounds_count++;
 		$cmp[] = $c;
 	}
 	
@@ -157,7 +313,7 @@ if($_GET['format'] == 'json' && $_GET['kind'] == 'ingredients'){
 		$s['ingSupplierID'] = (int)$res['ingSupplierID'];
 		$s['ingID'] = (int)$res['ingID'];
 		$s['supplierLink'] = (string)$res['supplierLink'] ?: 'N/A';
-		$s['price'] = (double)$res['price'] ?: 0;
+		$s['price'] = (double)$res['price'];
 		$s['size'] = (double)$res['size'] ?: 10;
 		$s['manufacturer'] = (string)$res['manufacturer']?: 'N/A';
 		$s['preferred'] = (int)$res['preferred'] ?: 0;
@@ -188,13 +344,15 @@ if($_GET['format'] == 'json' && $_GET['kind'] == 'ingredients'){
 		$is['email'] = (string)$res_sup['email']?: 'N/A';
 
 		$ingSup[] = $is;
+		$ing_suppliers_count++;
 	}
 	
 	
 	$vd['product'] = $product;
 	$vd['version'] = $ver;
-	$vd['ingredients'] = $ingredients;
-	$vd['suppliers'] = $suppliers_count;
+	$vd['ingredients'] = $ingredients_count;
+	$vd['suppliers'] = $ing_suppliers_count;
+	$vd['ingredient_compounds'] = $ingredient_compounds_count;
 	$vd['timestamp'] = date('d/m/Y H:i:s');
 
 	
@@ -220,6 +378,8 @@ if($_GET['format'] == 'json' && $_GET['kind'] == 'single-ingredient' && $_GET['i
 	}
 	$ingredient = 0;
 	$suppliers_count = 0;
+	$ingredient_compounds_count = 0;
+	$ing_suppliers_count = 0;
 	
 	$q = mysqli_query($conn, "SELECT * FROM ingredients WHERE id=".$_GET['id']."");
 	while($res = mysqli_fetch_assoc($q)){
@@ -267,7 +427,7 @@ if($_GET['format'] == 'json' && $_GET['kind'] == 'single-ingredient' && $_GET['i
 		$r['impact_top'] = (int)$res['impact_top'];
 		$r['impact_heart'] = (int)$res['impact_heart'];
 		$r['impact_base'] = (int)$res['impact_base'];
-		$r['created'] = (string)$res['created'];
+		$r['created_at'] = (string)$res['created_at'];
 		$r['usage_type'] = (string)$res['usage_type'];
 		$r['noUsageLimit'] = (int)$res['noUsageLimit'];
 		$r['byPassIFRA'] = (int)$res['byPassIFRA'];
@@ -279,7 +439,7 @@ if($_GET['format'] == 'json' && $_GET['kind'] == 'single-ingredient' && $_GET['i
 		$ing[] = $r;
 	}
 	
-	$q = mysqli_query($conn, "SELECT * FROM allergens WHERE ing ='".$ing['0']['name']."'");
+	$q = mysqli_query($conn, "SELECT * FROM ingredient_compounds WHERE ing ='".$ing['0']['name']."'");
 	while($res = mysqli_fetch_assoc($q)){
 
 		$c['id'] = (int)$res['id'];
@@ -287,11 +447,14 @@ if($_GET['format'] == 'json' && $_GET['kind'] == 'single-ingredient' && $_GET['i
 		$c['name'] = (string)$res['name'];
 		$c['cas'] = (string)$res['cas'] ?: 'N/A';
 		$c['ec'] = (string)$res['ec'] ?: 'N/A';
-		$c['percentage'] = (double)$res['percentage'];
+		$c['min_percentage'] = (double)$res['min_percentage'];
+		$c['max_percentage'] = (double)$res['max_percentage'];
+		$c['GHS'] = (string)$res['GHS'];
 		$c['toDeclare'] = (int)$res['toDeclare'];
-		$c['created'] = (string)$res['created'];
+		$c['created_at'] = (string)$res['created_at'];
 
 		$cmp[] = $c;
+		$ingredient_compounds_count++;
 	}
 	
 	
@@ -302,7 +465,7 @@ if($_GET['format'] == 'json' && $_GET['kind'] == 'single-ingredient' && $_GET['i
 		$s['ingSupplierID'] = (int)$res['ingSupplierID'];
 		$s['ingID'] = (int)$res['ingID'];
 		$s['supplierLink'] = (string)$res['supplierLink'] ?: 'N/A';
-		$s['price'] = (double)$res['price'] ?: 0;
+		$s['price'] = (double)$res['price'];
 		$s['size'] = (double)$res['size'] ?: 10;
 		$s['manufacturer'] = (string)$res['manufacturer']?: 'N/A';
 		$s['preferred'] = (int)$res['preferred'] ?: 0;
@@ -333,13 +496,15 @@ if($_GET['format'] == 'json' && $_GET['kind'] == 'single-ingredient' && $_GET['i
 			$is['email'] = (string)$res_sup['email'] ?: 'N/A';
 	
 			$ingSup[] = $is;
+			$ing_suppliers_count++;
 		}
 	}
 	
 	$vd['product'] = $product;
 	$vd['version'] = $ver;
 	$vd['ingredients'] = $ingredient;
-	$vd['suppliers'] = $suppliers_count;
+	$vd['suppliers'] = $ing_suppliers_count;
+	$vd['ingredient_compounds'] = $ingredient_compounds_count;
 	$vd['timestamp'] = date('d/m/Y H:i:s');
 
 	
@@ -396,13 +561,13 @@ if($_GET['format'] == 'json' && $_GET['kind'] == 'suppliers'){
 	
 	$vd['product'] = $product;
 	$vd['version'] = $ver;
-	$vd['suppliers'] = $suppliers_count;
+	$vd['inventory_suppliers'] = $suppliers_count;
 	$vd['timestamp'] = date('d/m/Y H:i:s');
 
-	$result['suppliers'] = $sup;
+	$result['inventory_suppliers'] = $sup;
 	$result['pvMeta'] = $vd;
 
-	header('Content-disposition: attachment; filename=suppliers.json');
+	header('Content-disposition: attachment; filename=suppliers_inventory.json');
 	header('Content-type: application/json');
 	echo json_encode($result, JSON_PRETTY_PRINT);
 	return;	
@@ -427,7 +592,7 @@ if($_GET['format'] == 'json' && $_GET['kind'] == 'supplier-materials' && $_GET['
 		$r['id'] = (int)$i['id'];
 		$r['name'] = (string)$i['name'];
 		$r['cas'] = (string)$i['cas'] ?: 'N/A';
-		$r['created'] = (string)$i['created'] ?: 'N/A';
+		$r['created_at'] = (string)$i['created_at'] ?: 'N/A';
 		$r['odor'] = (string)$i['odor'] ?: 'N/A';
 
 		$ingredient++;

@@ -6,44 +6,68 @@
  * Full formula js helpers
  */
 
-//MULTIPLY - DIVIDE
+//SCALE FORMULA SIMPLE
 $('.manageQuantity').click(function() {
 	$.ajax({ 
-    url: '/pages/manageFormula.php', 
+    url: '/core/core.php', 
 	type: 'POST',
     data: {
-		do: 'scale',
+		action: 'simpleScale',
 		scale: $(this).attr('data-action'),
 		formula: myFID,
-		},
+	},
+	dataType: 'json',
     success: function (data) {
 		reload_formula_data();
-    }
+		$('#toast-title').html('<i class="fa-solid fa-circle-check mx-2"></i>' + data.success);
+		$('.toast-header').removeClass().addClass('toast-header alert-success');
+		$('.toast').toast('show');
+    },
+	error: function (xhr, status, error) {
+		$('#toast-title').html('<i class="fa-solid fa-circle-exclamation mx-2"></i> An ' + status + ' occurred, check server logs for more info. '+ error);
+		$('.toast-header').removeClass().addClass('toast-header alert-danger');
+		$('.toast').toast('show');
+	}
   });
 });
 
-//AMOUNT TO MAKE
+//SCALE FORMULA ADVANCED
 $('#amount_to_make').on('click', '[id*=amountToMake]', function () {
+	$('#amountToMakeMsg').html('');
 	if($("#sg").val().trim() == '' ){
         $('#sg').focus();
-	  	$('#amountToMakeMsg').html('<div class="alert alert-danger"><strong>Error:</strong> all fields required!</div>');
+	  	$('#amountToMakeMsg').html('<div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation mx-2"></i>Specific gravity is required</div>');
 	}else if($("#totalAmount").val().trim() == '' ){
  		$('#totalAmount').focus();
-	  	$('#amountToMakeMsg').html('<div class="alert alert-danger"><strong>Error:</strong> all fields required!</div>');		
+	  	$('#amountToMakeMsg').html('<div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation mx-2"></i>New amount is required</div>');		
 	}else{
+		$('#amountToMakeMsg').html('<div class="alert alert-info mx-2"><img src="/img/loading.gif"/>Scaling the formula...</div>');
+		$('#amountToMake').prop('disabled', true);
 		$.ajax({ 
-		url: '/pages/manageFormula.php', 
+		url: '/core/core.php', 
 		type: 'POST',
 		cache: false,
 		data: {
+			action: 'advancedScale',
 			fid: myFID,
 			SG: $("#sg").val(),
 			amount: $("#totalAmount").val(),
-			},
+		},
+		dataType: 'json',
 		success: function (data) {
-			$('#amountToMakeMsg').html(data);
-			$('#amount_to_make').modal('toggle');
-			reload_formula_data();
+			if( data.success ){
+				$('#amountToMakeMsg').html('');
+				$('#amount_to_make').modal('toggle');
+				$('#amountToMake').prop('disabled', false);
+				reload_formula_data();
+			} else {
+				$('#amountToMakeMsg').html('<div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation mx-2"></i>' + data.error + '</div>');
+				$('#amountToMake').prop('disabled', false);
+			}
+		},
+		error: function (xhr, status, error) {
+			$('#amountToMakeMsg').html('<div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation mx-2"></i>An ' + status + ' occurred, check server logs for more info. ' + error + '</div>');
+			$('#amountToMake').prop('disabled', false);
 		}
 	  });
 	}
@@ -57,23 +81,28 @@ $('#create_accord').on('click', '[id*=createAccord]', function () {
 	  	$('#accordMsg').html('<div class="alert alert-danger"><strong>Error:</strong> Accord name required!</div>');	
 	}else{
 		$.ajax({ 
-		url: '/pages/manageFormula.php', 
+		url: '/core/core.php', 
 		type: 'POST',
 		cache: false,
 		data: {
 			fid: myFID,
 			accordName: $("#accordName").val(),
 			accordProfile: $("#accordProfile").val(),
-			},
+		},
 		dataType: 'json',
 		success: function (data) {
 			if(data.success){
-			var msg = '<div class="alert alert-success"><i class="fa-solid fa-circle-check mx-2"></i>'+data.success+'</div>';
-			reload_formula_data();
-		}else if(data.error){
-			var msg = '<div class="alert alert-danger alert-dismissible"><i class="fa-solid fa-triangle-exclamation mx-2"></i>'+data.error+'</div>';
-		}
-		$('#accordMsg').html(msg);
+				var msg = '<div class="alert alert-success"><i class="fa-solid fa-circle-check mx-2"></i>'+data.success+'</div>';
+				reload_formula_data();
+			}else if(data.error){
+				var msg = '<div class="alert alert-danger alert-dismissible"><i class="fa-solid fa-triangle-exclamation mx-2"></i>'+data.error+'</div>';
+			}
+				$('#accordMsg').html(msg);
+		},
+		error: function (xhr, status, error) {
+			$('#toast-title').html('<i class="fa-solid fa-circle-exclamation mx-2"></i> An ' + status + ' occurred, check server logs for more info. '+ error);
+			$('.toast-header').removeClass().addClass('toast-header alert-danger');
+			$('.toast').toast('show');
 		}
 	  });
 	}
@@ -86,7 +115,7 @@ $('#conv_ingredient').on('click', '[id*=conv2ing]', function () {
 	  	$('#cnvMsg').html('<div class="alert alert-danger alert-dismissible"><strong>Error:</strong> Ingredient name required!</div>');	
 	}else{
 		$.ajax({ 
-		url: '/pages/manageFormula.php', 
+		url: '/core/core.php', 
 		type: 'POST',
 		cache: false,
 		data: {
@@ -94,7 +123,7 @@ $('#conv_ingredient').on('click', '[id*=conv2ing]', function () {
 			fname: myFNAME,
 			ingName: $("#ingName").val(),
 			action: 'conv2ing',
-			},
+		},
 		dataType: 'json',
 		success: function (data) {
 			if(data.success){
@@ -103,6 +132,11 @@ $('#conv_ingredient').on('click', '[id*=conv2ing]', function () {
 				var msg = '<div class="alert alert-danger"><i class="fa-solid fa-triangle-exclamation mx-2"></i>'+data.error+'</div>';
 			}
 			$('#cnvMsg').html(msg);
+		},
+		error: function (xhr, status, error) {
+			$('#toast-title').html('<i class="fa-solid fa-circle-exclamation mx-2"></i> An ' + status + ' occurred, check server logs for more info. '+ error);
+			$('.toast-header').removeClass().addClass('toast-header alert-danger');
+			$('.toast').toast('show');
 		}
 	  });
 	}
@@ -111,13 +145,13 @@ $('#conv_ingredient').on('click', '[id*=conv2ing]', function () {
 //Clone
 $('#cloneMe').click(function() {
 $.ajax({ 
-    url: '/pages/manageFormula.php', 
+    url: '/core/core.php', 
 	type: 'POST',
     data: {
 		action: "clone",
 		fname: myFNAME,
 		fid: myFID,
-		},
+	},
 	dataType: 'json',
     success: function (data) {
 		if ( data.success ) {
@@ -127,6 +161,11 @@ $.ajax({
 			$('#toast-title').html('<i class="fa-solid fa-circle-exclamation mr-2"></i>' + data.error);
 			$('.toast-header').removeClass().addClass('toast-header alert-danger');
 		}
+		$('.toast').toast('show');
+	},
+	error: function (xhr, status, error) {
+		$('#toast-title').html('<i class="fa-solid fa-circle-exclamation mx-2"></i> An ' + status + ' occurred, check server logs for more info. '+ error);
+		$('.toast-header').removeClass().addClass('toast-header alert-danger');
 		$('.toast').toast('show');
 	}
 
@@ -136,27 +175,32 @@ $.ajax({
 //Add in Schedule
 $('#schedule_to_make').on('click', '[id*=addTODO]', function () {
 	$.ajax({ 
-    url: '/pages/manageFormula.php', 
+    url: '/core/core.php', 
 	type: 'POST',
     data: {
 		action: 'todo',
 		fname: myFNAME,
 		fid: myFID,
 		add: true,
-		},
+	},
 	dataType: 'json',
     success: function (data) {
-	
 		if ( data.success ) {
 			$('#toast-title').html('<i class="fa-solid fa-circle-check mr-2"></i>' + data.success);
 			$('.toast-header').removeClass().addClass('toast-header alert-success');
-			$('#schedule_to_make').modal('toggle');
+			
 		} else {
 			$('#toast-title').html('<i class="fa-solid fa-circle-exclamation mr-2"></i>' + data.error);
 			$('.toast-header').removeClass().addClass('toast-header alert-danger');
 		}
+		$('#schedule_to_make').modal('toggle');
 		$('.toast').toast('show');
-    }
+    },
+	error: function (xhr, status, error) {
+		$('#toast-title').html('<i class="fa-solid fa-circle-exclamation mx-2"></i> An ' + status + ' occurred, check server logs for more info. '+ error);
+		$('.toast-header').removeClass().addClass('toast-header alert-danger');
+		$('.toast').toast('show');
+	}
   });
 });
 
@@ -173,7 +217,7 @@ $('#formula').on('click', '[id*=cCAS]', function () {
 
 $('#replaceIng').on('click', '[id*=replaceConfirm]', function () {
 	$.ajax({ 
-		url: "/pages/manageFormula.php" , 
+		url: "/core/core.php" , 
 		type: 'POST',
 		data: {
 			action: "repIng",
@@ -181,7 +225,7 @@ $('#replaceIng').on('click', '[id*=replaceConfirm]', function () {
 			ingSrcName: $("#ingRepName").val(),
 			ingSrcID: $("#ingRepID").val(),
 			fid: myFID,
-			},
+		},
 		dataType: 'json',
 		success: function (data) {
 			if ( data.success ) {
@@ -194,8 +238,12 @@ $('#replaceIng').on('click', '[id*=replaceConfirm]', function () {
             	var msg ='<div class="alert alert-danger"><i class="fa-solid fa-triangle-exclamation mx-2"></i>' + data.error + '</div>';
 				$('#msgRepl').html(msg);
 			}
-			
 		},
+		error: function (xhr, status, error) {
+			$('#toast-title').html('<i class="fa-solid fa-circle-exclamation mx-2"></i> An ' + status + ' occurred, check server logs for more info. '+ error);
+			$('.toast-header').removeClass().addClass('toast-header alert-danger');
+			$('.toast').toast('show');
+		}
 	  });
 });
 
@@ -205,7 +253,6 @@ $("#formula").on("click", ".open-replace-dialog", function () {
 	$("#replaceIng #ingTargInfo").html('');
 	$("#replaceIng #repIngNameDest").val( '' );
 	$("#repGrid").hide();
-
 	
 	var ingRepName = $(this).data('name');
 	var ingRepID = $(this).data('id');
@@ -225,7 +272,7 @@ $("#formula").on("click", ".open-replace-dialog", function () {
 	
 	$("#repIngNameDest").select2({
 		width: '100%',
-		placeholder: 'Search for ingredient (name, cas)',
+		placeholder: '',
 		allowClear: true,
 		dropdownAutoWidth: true,
 		containerCssClass: "repIngNameDest",
@@ -247,14 +294,15 @@ $("#formula").on("click", ".open-replace-dialog", function () {
 			},
 			processResults: function(data) {
 				return {
-					results: $.map(data.data, function(obj) {
+					results: $.map(data.data, function(ingData) {
 					  return {
-						id: obj.name,
-						description: obj.description,
-						cas: obj.cas,
-						stock: obj.stock,
-						physical_state: obj.physical_state,
-						name: obj.name
+						id: ingData.name,
+						description: ingData.description,
+						cas: ingData.cas,
+						stock: ingData.stock,
+						physical_state: ingData.physical_state,
+						name: ingData.name,
+						mUnit: ingData.mUnit
 
 					  }
 					})
@@ -275,22 +323,21 @@ $("#formula").on("click", ".open-replace-dialog", function () {
 
 
 	function formatIngredients (ingredientData) {
+		//console.log(ingredientData);
+		if (ingredientData.name === '') {
+      		return 'Search for ingredient (name, cas)';
+    	}
+
 		if (ingredientData.loading) {
 			return ingredientData.name;
 		}
-	 
-		//extrasShow();
-	
+	 	
 		if (!ingredientData.name){
 			return 'No ingredient found...';
 		}
 		
-		var measureIn;
-		if (ingredientData.physical_state == '1'){
-			measureIn = 'mL';
-		}else if (ingredientData.physical_state == '2'){
-			measureIn = 'grams';
-		}
+		let measureIn = ingredientData.mUnit || (ingredientData.physical_state == '1' ? 'mL' : ingredientData.physical_state == '2' ? 'grams' : '');
+
 		
 		var $container = $(
 			"<div class='select_result_igredient clearfix'>" +
@@ -328,7 +375,7 @@ $("#formula").on("click", ".open-replace-dialog", function () {
 
 $('#mrgIng').on('click', '[id*=mergeConfirm]', function () {
 	$.ajax({ 
-		url: '/pages/update_data.php', 
+		url: '/core/core.php', 
 		type: 'POST',
 		data: {
 			merge: "true",
@@ -336,7 +383,7 @@ $('#mrgIng').on('click', '[id*=mergeConfirm]', function () {
 			ingSrcName: $("#ingSrcName").val(),
 			ingSrcID: $("#ingSrcID").val(),
 			fid: myFID,
-			},
+		},
 		dataType: 'json',
 		success: function (data) {
 			if ( data.success ) {
@@ -349,8 +396,12 @@ $('#mrgIng').on('click', '[id*=mergeConfirm]', function () {
             	var msg ='<div class="alert alert-danger"><i class="fa-solid fa-triangle-exclamation mx-2"></i>' + data.error + '</div>';
 				$('#msgMerge').html(msg);
 			}
-			
 		},
+		error: function (xhr, status, error) {
+			$('#toast-title').html('<i class="fa-solid fa-circle-exclamation mx-2"></i> An ' + status + ' occurred, check server logs for more info. '+ error);
+			$('.toast-header').removeClass().addClass('toast-header alert-danger');
+			$('.toast').toast('show');
+		}
 	  });
 });
 
@@ -411,11 +462,11 @@ $("#formula").on("click", ".open-merge-dialog", function () {
 
 $('#manage-quantity').on('click', '[id*=quantityConfirm]', function () {
 	$.ajax({ 
-		url: '/pages/update_data.php', 
+		url: '/core/core.php', 
 		type: 'POST',
 		data: {
 			updateQuantity: "true",
-			ingQuantity: $(".ingQuantity").val(),
+			ingQuantity: $("#ingQuantity").val(),
 			ingQuantityName: $("#ingQuantityName").val(),
 			ingQuantityID: $("#ingQuantityID").val(),
 			ingID: $("#mainingid").val(),
@@ -423,7 +474,7 @@ $('#manage-quantity').on('click', '[id*=quantityConfirm]', function () {
 			ingReCalc: $("#reCalc").prop('checked'),
 			formulaSolventID: $("#formulaSolvents").val(),
 			fid: myFID,
-			},
+		},
 		dataType: 'json',
 		success: function (data) {
 			if(data.success){
@@ -435,8 +486,12 @@ $('#manage-quantity').on('click', '[id*=quantityConfirm]', function () {
 				msg ='<div class="alert alert-danger"><i class="fa-solid fa-triangle-exclamation mx-2"></i>' + data.error + '</div>';
 				$('#msgQuantity').html(msg);
 			}
-			
 		},
+		error: function (xhr, status, error) {
+			$('#toast-title').html('<i class="fa-solid fa-circle-exclamation mx-2"></i> An ' + status + ' occurred, check server logs for more info. '+ error);
+			$('.toast-header').removeClass().addClass('toast-header alert-danger');
+			$('.toast').toast('show');
+		}
 	  });
 });
 
@@ -607,13 +662,10 @@ function update_bar(){
 			$('#heart_bar').attr('aria-valuenow', heart).css('width', heart + '%').attr('aria-valuemax', heart_max);
 			$('#base_bar').attr('aria-valuenow', base).css('width', base + '%').attr('aria-valuemax', base_max);
 	
-			$('.top-label').html(top + "% Top Notes");
-			$('.heart-label').html(heart + "% Heart Notes");
-			$('.base-label').html(base + "% Base Notes");
+			$('#top_label').html(top + "% Top Notes");
+			$('#heart_label').html(heart + "% Heart Notes");
+			$('#base_label').html(base + "% Base Notes");
 			
-			//$('.Top_notes').html("Top Notes");
-			//$('.Heart_notes').html("Heart Notes");
-			//$('.Base_notes').html("Base Notes");
 
 		} else {
 			$('#progress-area').hide();
@@ -621,3 +673,5 @@ function update_bar(){
 		
 	}); 
 };
+
+update_bar();
