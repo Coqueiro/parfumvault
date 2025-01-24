@@ -1,3 +1,6 @@
+## Before commiting DB data changes
+sudo chmod -R ga+rwx db_data
+
 ## PV with MariaDB
 
 

@@ -1,3 +1,5 @@
+*.mdf
+*.ldf
 .htaccess
 .DS_Store
 request.log
