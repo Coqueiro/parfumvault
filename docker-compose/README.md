@@ -1,4 +1,5 @@
 ## Before commiting DB data changes
+docker-compose down
 sudo chmod -R ga+rwx db_data
 
 ## PV with MariaDB
