@@ -2,6 +2,11 @@
 docker-compose down
 sudo chmod -R ga+rwx db_data
 
+# To upgrade
+1- Try to remove custom changes and get update statements to add back changes after migration. Run migration and try to upgrade tables and then later add back custom changes and then update statements. 
+2- Analyze php code to understand why listing the formula is not possible, to try to fix the database. Or try to upgrade and add a formula through the web ui and see what changes in the DB.
+3- A good idea is to run two instances of the project, the old pointing to another port and new to current port and use both at the same time to debug, generate anything necessary from the version 9.x.
+
 ## PV with MariaDB
 
 
